@@ -47,6 +47,13 @@
     .checkbox-row label span { display:block; margin-top:3px; color:var(--muted); font-size:.76rem; font-weight:400; }
     .status { margin-top:10px; color:var(--muted); font-size:.9rem; min-height:1.4em; }
     .status.good { color:#86efac; } .status.warn { color:#fcd34d; } .status.bad { color:#fca5a5; }
+    .storage {
+      margin-top:10px; padding:9px 10px; border:1px solid var(--line); border-radius:10px;
+      color:var(--muted); font-size:.78rem; background:#0f172a;
+    }
+    .storage.good { color:#86efac; border-color:#166534; }
+    .storage.warn { color:#fcd34d; border-color:#854d0e; }
+    .storage.bad { color:#fca5a5; border-color:#7f1d1d; }
     .fix {
       margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:12px;
       display:grid; grid-template-columns:1fr 1fr; gap:8px;
@@ -122,6 +129,7 @@
   <section class="card">
     <button id="captureBtn" class="capture">📍 Capture next bay</button>
     <div id="status" class="status">Ready. GPS requires HTTPS and precise location permission.</div>
+    <div id="storageStatus" class="storage">Storage: checking database configuration…</div>
     <div id="fix" class="fix" hidden>
       <div class="metric"><span>Bay</span><strong id="mBay">—</strong></div>
       <div class="metric"><span>Accuracy</span><strong id="mAcc">—</strong></div>
@@ -129,7 +137,7 @@
       <div class="metric"><span>Longitude</span><strong id="mLon">—</strong></div>
     </div>
     <div class="small" style="margin-top:10px">
-      One tap samples GPS for up to 6 seconds and keeps the most accurate live fix returned by the device.
+      Each successful capture is retained locally immediately and then autosaved to the road-segment document in MongoDB.
     </div>
   </section>
 
@@ -147,7 +155,7 @@
   </section>
 
   <section class="card">
-    <button id="clearBtn" class="danger">Clear current segment</button>
+    <button id="clearBtn" class="danger">Finish & clear current segment</button>
   </section>
 </main>
 
@@ -162,25 +170,72 @@
 const $ = id => document.getElementById(id);
 
 const fields = ["segment","betweenA","betweenB","side","area","easypark","startBay","direction"];
-let points = JSON.parse(localStorage.getItem("civicmaps_points") || "[]");
+const POINTS_KEY = "civicmaps_points";
+const FORM_KEY = "civicmaps_form";
+const SEGMENT_ID_KEY = "civicmaps_segment_id";
+const REVISION_KEY = "civicmaps_segment_revision";
+const PENDING_KEY = "civicmaps_pending_segment";
+
+let points = JSON.parse(localStorage.getItem(POINTS_KEY) || "[]");
+let segmentId = localStorage.getItem(SEGMENT_ID_KEY) || createSegmentId();
+let revision = parseInt(localStorage.getItem(REVISION_KEY) || "0", 10) || 0;
+let metadataSaveTimer = null;
+let mongoConfigured = null;
+
+function createSegmentId() {
+  const id = (crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, "0").slice(-12)}`;
+  localStorage.setItem(SEGMENT_ID_KEY, id);
+  return id;
+}
+
+function startNewSegmentIdentity() {
+  localStorage.removeItem(SEGMENT_ID_KEY);
+  segmentId = createSegmentId();
+  revision = 0;
+  localStorage.setItem(REVISION_KEY, "0");
+  localStorage.removeItem(PENDING_KEY);
+}
+
+function bumpRevision() {
+  revision += 1;
+  localStorage.setItem(REVISION_KEY, String(revision));
+}
 
 function saveForm() {
   const form = { unnumbered: $("unnumbered").checked };
   fields.forEach(id => form[id] = $(id).value);
-  localStorage.setItem("civicmaps_form", JSON.stringify(form));
+  localStorage.setItem(FORM_KEY, JSON.stringify(form));
 }
+
 function restoreForm() {
-  const form = JSON.parse(localStorage.getItem("civicmaps_form") || "{}");
+  const form = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
   fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
   $("unnumbered").checked = Boolean(form.unnumbered);
 }
-fields.forEach(id => $(id).addEventListener("change", saveForm));
-fields.forEach(id => $(id).addEventListener("input", saveForm));
-$("unnumbered").addEventListener("change", () => { saveForm(); updateModeUI(); });
+
+fields.forEach(id => {
+  $(id).addEventListener("input", () => {
+    saveForm();
+    scheduleMetadataPersist();
+  });
+  $(id).addEventListener("change", () => {
+    saveForm();
+    scheduleMetadataPersist();
+  });
+});
+
+$("unnumbered").addEventListener("change", () => {
+  saveForm();
+  updateModeUI();
+  scheduleMetadataPersist();
+});
 
 function isUnnumbered() {
   return $("unnumbered").checked;
 }
+
 function currentBay() {
   if (isUnnumbered()) return null;
   const start = parseInt($("startBay").value, 10);
@@ -188,18 +243,21 @@ function currentBay() {
   if (!Number.isFinite(start)) return null;
   return start + (points.length * direction);
 }
+
 function pointLabel(point, index) {
   if (point.unnumbered || point.bay === null || point.bay === undefined) {
     return `Unnumbered ${point.captureSequence || index + 1}`;
   }
   return String(point.bay);
 }
+
 function updateModeUI() {
   const unnumbered = isUnnumbered();
   ["area","easypark","startBay","direction"].forEach(id => $(id).disabled = unnumbered);
   $("captureBtn").textContent = unnumbered ? "📍 Capture next unnumbered bay" : "📍 Capture next bay";
   $("unnumbered").disabled = points.length > 0;
 }
+
 function validateMeta() {
   const required = ["segment","betweenA","betweenB","side"];
   if (!isUnnumbered()) required.push("area","easypark","startBay");
@@ -210,10 +268,17 @@ function validateMeta() {
       : "Complete all numbered-bay segment fields before capture.");
   }
 }
+
 function setStatus(msg, cls="") {
   $("status").textContent = msg;
   $("status").className = "status " + cls;
 }
+
+function setStorageStatus(msg, cls="") {
+  $("storageStatus").textContent = msg;
+  $("storageStatus").className = "storage " + cls;
+}
+
 function render() {
   $("rows").innerHTML = points.map((p, index) => `
     <tr>
@@ -223,9 +288,102 @@ function render() {
       <td>${p.accuracy.toFixed(1)}</td>
     </tr>`).join("");
   $("count").textContent = points.length;
-  localStorage.setItem("civicmaps_points", JSON.stringify(points));
+  localStorage.setItem(POINTS_KEY, JSON.stringify(points));
   updateModeUI();
 }
+
+function buildPayload(savedReason="manual", storageState="active") {
+  const unnumbered = isUnnumbered();
+  return {
+    schema: "civicmaps.parking_segment.v2",
+    segmentId,
+    revision,
+    segment: {
+      street: $("segment").value.trim().toUpperCase(),
+      between: [
+        $("betweenA").value.trim().toUpperCase(),
+        $("betweenB").value.trim().toUpperCase()
+      ],
+      side: $("side").value,
+      numberingMode: unnumbered ? "unnumbered" : "numbered",
+      paymentRequired: !unnumbered,
+      parkingAreaNumber: unnumbered ? null : $("area").value.trim(),
+      easyParkNumber: unnumbered ? null : $("easypark").value.trim()
+    },
+    capture: {
+      source: "device_geolocation",
+      enableHighAccuracy: true,
+      generatedAt: new Date().toISOString(),
+      pointCount: points.length
+    },
+    storageState,
+    savedReason,
+    bays: points
+  };
+}
+
+async function persistSegment(reason="autosave", storageState="active", bump=false) {
+  if (!points.length) return true;
+  try {
+    validateMeta();
+  } catch (e) {
+    setStorageStatus(`Local only — ${e.message}`, "warn");
+    return false;
+  }
+
+  if (bump || revision < 1) bumpRevision();
+
+  const payload = buildPayload(reason, storageState);
+  localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
+  setStorageStatus("Storage: saving road segment…", "warn");
+
+  try {
+    const response = await fetch("/api/segments", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.error || `Save failed (${response.status}).`);
+    }
+
+    localStorage.removeItem(PENDING_KEY);
+    setStorageStatus(
+      `Storage: saved to MongoDB · revision ${result.revision} · ${result.pointCount} point${result.pointCount === 1 ? "" : "s"}`,
+      "good"
+    );
+    return true;
+  } catch (e) {
+    setStorageStatus(`Storage: local copy retained — ${e.message}`, "bad");
+    return false;
+  }
+}
+
+function scheduleMetadataPersist() {
+  if (!points.length) return;
+  clearTimeout(metadataSaveTimer);
+  metadataSaveTimer = setTimeout(() => {
+    persistSegment("metadata_update", "active", true);
+  }, 800);
+}
+
+async function checkStorageHealth() {
+  try {
+    const response = await fetch("/health", {cache:"no-store"});
+    const health = await response.json();
+    mongoConfigured = Boolean(health.mongoConfigured);
+    if (mongoConfigured) {
+      setStorageStatus(`Storage: MongoDB configured (${health.mongoDatabase}.${health.mongoCollection})`, "good");
+    } else {
+      setStorageStatus("Storage: MongoDB not configured yet — captures remain protected in local storage.", "warn");
+    }
+  } catch {
+    setStorageStatus("Storage: server status unavailable — captures remain protected locally.", "warn");
+  }
+}
+
 function bestFixSingleTap() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
@@ -268,6 +426,7 @@ $("captureBtn").addEventListener("click", async () => {
     const captureSequence = points.length + 1;
     const unnumbered = isUnnumbered();
     const label = unnumbered ? `unnumbered bay ${captureSequence}` : `bay ${bay}`;
+
     $("captureBtn").disabled = true;
     setStatus(`Capturing ${label}…`, "warn");
 
@@ -286,6 +445,7 @@ $("captureBtn").addEventListener("click", async () => {
       speed: c.speed,
       capturedAt: new Date(pos.timestamp).toISOString()
     };
+
     points.push(point);
     render();
 
@@ -296,7 +456,8 @@ $("captureBtn").addEventListener("click", async () => {
     $("mLon").textContent = c.longitude.toFixed(8);
 
     const cls = c.accuracy <= 5 ? "good" : (c.accuracy <= 10 ? "warn" : "bad");
-    setStatus(`${unnumbered ? `Unnumbered bay ${captureSequence}` : `Bay ${bay}`} captured. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
+    setStatus(`${unnumbered ? `Unnumbered bay ${captureSequence}` : `Bay ${bay}`} captured locally. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
+    await persistSegment("capture", "active", true);
   } catch (e) {
     setStatus(e.message, "bad");
   } finally {
@@ -304,41 +465,24 @@ $("captureBtn").addEventListener("click", async () => {
   }
 });
 
-$("undoBtn").addEventListener("click", () => {
+$("undoBtn").addEventListener("click", async () => {
   if (!points.length) return;
   points.pop();
   render();
-  setStatus("Last capture removed.");
+
+  if (points.length) {
+    setStatus("Last capture removed locally. Updating stored segment…", "warn");
+    const saved = await persistSegment("undo", "active", true);
+    setStatus(saved ? "Last capture removed and stored segment updated." : "Last capture removed locally; database update is pending.", saved ? "good" : "warn");
+  } else {
+    bumpRevision();
+    setStatus("Last local capture removed. The previous server copy is preserved; use Finish & clear to begin a new segment.", "warn");
+    setStorageStatus("Storage: server copy preserved to prevent accidental data loss.", "warn");
+  }
 });
 
-function buildPayload() {
-  const unnumbered = isUnnumbered();
-  return {
-    schema: "civicmaps.parking_segment.v1",
-    segment: {
-      street: $("segment").value.trim().toUpperCase(),
-      between: [
-        $("betweenA").value.trim().toUpperCase(),
-        $("betweenB").value.trim().toUpperCase()
-      ],
-      side: $("side").value,
-      numberingMode: unnumbered ? "unnumbered" : "numbered",
-      paymentRequired: !unnumbered,
-      parkingAreaNumber: unnumbered ? null : $("area").value.trim(),
-      easyParkNumber: unnumbered ? null : $("easypark").value.trim()
-    },
-    capture: {
-      source: "device_geolocation",
-      enableHighAccuracy: true,
-      generatedAt: new Date().toISOString(),
-      pointCount: points.length
-    },
-    bays: points
-  };
-}
-
 $("copyBtn").addEventListener("click", async () => {
-  const text = JSON.stringify(buildPayload(), null, 2);
+  const text = JSON.stringify(buildPayload("export", "active"), null, 2);
   try {
     await navigator.clipboard.writeText(text);
     setStatus("JSON copied.", "good");
@@ -348,7 +492,7 @@ $("copyBtn").addEventListener("click", async () => {
 });
 
 $("downloadBtn").addEventListener("click", () => {
-  const payload = buildPayload();
+  const payload = buildPayload("export", "active");
   const name = [
     payload.segment.street.replace(/\s+/g,"_"),
     payload.segment.parkingAreaNumber || (payload.segment.numberingMode === "unnumbered" ? "UNNUMBERED" : "AREA"),
@@ -363,16 +507,43 @@ $("downloadBtn").addEventListener("click", () => {
   setStatus("JSON exported.", "good");
 });
 
-$("clearBtn").addEventListener("click", () => {
-  if (!confirm("Clear all captured bays for this segment?")) return;
+$("clearBtn").addEventListener("click", async () => {
+  const hasPoints = points.length > 0;
+  const message = hasPoints
+    ? "Finish this road segment and clear it from the device? The current segment will be saved to MongoDB first. If that save fails, nothing will be cleared."
+    : "Clear the current local segment state and start a new segment?";
+  if (!confirm(message)) return;
+
+  if (hasPoints) {
+    const saved = await persistSegment("segment_complete", "complete", true);
+    if (!saved) {
+      setStatus("Segment was not cleared because the database save did not complete.", "bad");
+      return;
+    }
+  }
+
   points = [];
+  startNewSegmentIdentity();
   render();
   $("fix").hidden = true;
-  setStatus("Current segment capture cleared.");
+  setStatus("New segment started. Update the street metadata before the next capture.", "good");
+  setStorageStatus(mongoConfigured
+    ? "Storage: ready for the next road segment."
+    : "Storage: MongoDB not configured yet — captures will remain protected locally.",
+    mongoConfigured ? "good" : "warn");
+});
+
+window.addEventListener("online", () => {
+  if (points.length) persistSegment("online_retry", "active", false);
 });
 
 restoreForm();
 render();
+checkStorageHealth();
+
+if (points.length) {
+  setTimeout(() => persistSegment("startup_retry", "active", revision < 1), 500);
+}
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
 </script>
