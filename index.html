@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="manifest.json" />
+  <title>CivicMAPS GPS Capture</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+      --bg:#0b1020; --panel:#121a2b; --muted:#8fa0bd; --text:#f8fafc;
+      --accent:#38bdf8; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+      --line:#26334c;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    main { max-width:720px; margin:0 auto; padding:16px 16px 96px; }
+    h1 { font-size:1.4rem; margin:0 0 4px; }
+    .sub { color:var(--muted); font-size:.9rem; margin-bottom:16px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:14px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .full { grid-column:1/-1; }
+    label { display:block; font-size:.78rem; color:var(--muted); margin-bottom:5px; }
+    input, select {
+      width:100%; border:1px solid var(--line); background:#0f172a; color:var(--text);
+      border-radius:10px; padding:12px; font-size:16px;
+    }
+    button {
+      width:100%; border:0; border-radius:14px; padding:15px 16px; font-size:1rem;
+      font-weight:700; cursor:pointer;
+    }
+    .capture { background:var(--accent); color:#082f49; font-size:1.12rem; min-height:58px; }
+    .capture[disabled] { opacity:.55; cursor:not-allowed; }
+    .secondary { background:#1e293b; color:var(--text); border:1px solid var(--line); }
+    .danger { background:#3a1518; color:#fecaca; border:1px solid #7f1d1d; }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    .status { margin-top:10px; color:var(--muted); font-size:.9rem; min-height:1.4em; }
+    .status.good { color:#86efac; } .status.warn { color:#fcd34d; } .status.bad { color:#fca5a5; }
+    .fix {
+      margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:12px;
+      display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    }
+    .metric span { display:block; color:var(--muted); font-size:.72rem; }
+    .metric strong { font-size:.95rem; word-break:break-all; }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; }
+    .small { font-size:.78rem; color:var(--muted); }
+    .pill { display:inline-block; border-radius:999px; padding:3px 8px; background:#1e293b; color:var(--muted); font-size:.75rem; }
+    .footer-actions { position:fixed; bottom:0; left:0; right:0; background:rgba(11,16,32,.96); border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); }
+    .footer-actions .inner { max-width:720px; margin:0 auto; display:flex; gap:10px; }
+    .footer-actions button { padding:12px; }
+    @media(max-width:520px){ .grid{grid-template-columns:1fr;} .full{grid-column:auto;} .fix{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<main>
+  <h1>CivicMAPS GPS Capture</h1>
+  <div class="sub">Parking bay field capture for EnforcementMaps</div>
+
+  <section class="card">
+    <div class="grid">
+      <div class="full">
+        <label for="segment">Street segment name</label>
+        <input id="segment" placeholder="ELIZABETH STREET" autocomplete="off">
+      </div>
+      <div>
+        <label for="betweenA">Between street A</label>
+        <input id="betweenA" placeholder="LITTLE LONSDALE STREET" autocomplete="off">
+      </div>
+      <div>
+        <label for="betweenB">Between street B</label>
+        <input id="betweenB" placeholder="LONSDALE STREET" autocomplete="off">
+      </div>
+      <div>
+        <label for="side">Side of street</label>
+        <select id="side">
+          <option value="">Select</option>
+          <option>NORTH</option><option>SOUTH</option><option>EAST</option><option>WEST</option>
+        </select>
+      </div>
+      <div>
+        <label for="area">Parking area number</label>
+        <input id="area" inputmode="numeric" placeholder="533">
+      </div>
+      <div>
+        <label for="easypark">EasyPark number</label>
+        <input id="easypark" inputmode="numeric" placeholder="7391">
+      </div>
+      <div>
+        <label for="startBay">Starting bay number</label>
+        <input id="startBay" inputmode="numeric" placeholder="28">
+      </div>
+      <div>
+        <label for="direction">Bay sequence</label>
+        <select id="direction">
+          <option value="-1">Descending (28, 27, 26…)</option>
+          <option value="1">Ascending (25, 26, 27…)</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <button id="captureBtn" class="capture">📍 Capture next bay</button>
+    <div id="status" class="status">Ready. GPS requires HTTPS and precise location permission.</div>
+    <div id="fix" class="fix" hidden>
+      <div class="metric"><span>Bay</span><strong id="mBay">—</strong></div>
+      <div class="metric"><span>Accuracy</span><strong id="mAcc">—</strong></div>
+      <div class="metric"><span>Latitude</span><strong id="mLat">—</strong></div>
+      <div class="metric"><span>Longitude</span><strong id="mLon">—</strong></div>
+    </div>
+    <div class="small" style="margin-top:10px">
+      One tap samples GPS for up to 6 seconds and keeps the most accurate live fix returned by the device.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row" style="align-items:center; margin-bottom:8px">
+      <div><strong>Captured bays</strong> <span id="count" class="pill">0</span></div>
+      <button id="undoBtn" class="secondary" style="max-width:120px">Undo last</button>
+    </div>
+    <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Bay</th><th>Latitude</th><th>Longitude</th><th>±m</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <button id="clearBtn" class="danger">Clear current segment</button>
+  </section>
+</main>
+
+<div class="footer-actions">
+  <div class="inner">
+    <button id="copyBtn" class="secondary">Copy JSON</button>
+    <button id="downloadBtn" class="secondary">Export JSON</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const fields = ["segment","betweenA","betweenB","side","area","easypark","startBay","direction"];
+let points = JSON.parse(localStorage.getItem("civicmaps_points") || "[]");
+
+function saveForm() {
+  const form = {};
+  fields.forEach(id => form[id] = $(id).value);
+  localStorage.setItem("civicmaps_form", JSON.stringify(form));
+}
+function restoreForm() {
+  const form = JSON.parse(localStorage.getItem("civicmaps_form") || "{}");
+  fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
+}
+fields.forEach(id => $(id).addEventListener("change", saveForm));
+fields.forEach(id => $(id).addEventListener("input", saveForm));
+
+function currentBay() {
+  const start = parseInt($("startBay").value, 10);
+  const direction = parseInt($("direction").value, 10);
+  if (!Number.isFinite(start)) return null;
+  return start + (points.length * direction);
+}
+function validateMeta() {
+  const required = ["segment","betweenA","betweenB","side","area","easypark","startBay"];
+  const missing = required.filter(id => !$(id).value.trim());
+  if (missing.length) {
+    throw new Error("Complete all segment fields before capture.");
+  }
+}
+function setStatus(msg, cls="") {
+  $("status").textContent = msg;
+  $("status").className = "status " + cls;
+}
+function render() {
+  $("rows").innerHTML = points.map(p => `
+    <tr>
+      <td>${p.bay}</td>
+      <td>${p.latitude.toFixed(8)}</td>
+      <td>${p.longitude.toFixed(8)}</td>
+      <td>${p.accuracy.toFixed(1)}</td>
+    </tr>`).join("");
+  $("count").textContent = points.length;
+  localStorage.setItem("civicmaps_points", JSON.stringify(points));
+}
+function bestFixSingleTap() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
+    let best = null;
+    let watchId = null;
+    let done = false;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (best) resolve(best);
+      else reject(new Error("No GPS fix was returned."));
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      pos => {
+        if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+        setStatus(`Sampling GPS… best accuracy ±${best.coords.accuracy.toFixed(1)} m`, best.coords.accuracy <= 5 ? "good" : "warn");
+        if (best.coords.accuracy <= 3) finish();
+      },
+      err => {
+        if (!best) {
+          done = true;
+          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+          reject(new Error(err.message || "GPS error."));
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+
+    setTimeout(finish, 6000);
+  });
+}
+
+$("captureBtn").addEventListener("click", async () => {
+  try {
+    validateMeta();
+    const bay = currentBay();
+    $("captureBtn").disabled = true;
+    setStatus(`Capturing bay ${bay}…`, "warn");
+
+    const pos = await bestFixSingleTap();
+    const c = pos.coords;
+    const point = {
+      bay,
+      latitude: c.latitude,
+      longitude: c.longitude,
+      accuracy: c.accuracy,
+      altitude: c.altitude,
+      altitudeAccuracy: c.altitudeAccuracy,
+      heading: c.heading,
+      speed: c.speed,
+      capturedAt: new Date(pos.timestamp).toISOString()
+    };
+    points.push(point);
+    render();
+
+    $("fix").hidden = false;
+    $("mBay").textContent = bay;
+    $("mAcc").textContent = `±${c.accuracy.toFixed(1)} m`;
+    $("mLat").textContent = c.latitude.toFixed(8);
+    $("mLon").textContent = c.longitude.toFixed(8);
+
+    const cls = c.accuracy <= 5 ? "good" : (c.accuracy <= 10 ? "warn" : "bad");
+    setStatus(`Bay ${bay} captured. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
+  } catch (e) {
+    setStatus(e.message, "bad");
+  } finally {
+    $("captureBtn").disabled = false;
+  }
+});
+
+$("undoBtn").addEventListener("click", () => {
+  if (!points.length) return;
+  points.pop();
+  render();
+  setStatus("Last capture removed.");
+});
+
+function buildPayload() {
+  return {
+    schema: "civicmaps.parking_segment.v1",
+    segment: {
+      street: $("segment").value.trim().toUpperCase(),
+      between: [
+        $("betweenA").value.trim().toUpperCase(),
+        $("betweenB").value.trim().toUpperCase()
+      ],
+      side: $("side").value,
+      parkingAreaNumber: $("area").value.trim(),
+      easyParkNumber: $("easypark").value.trim()
+    },
+    capture: {
+      source: "device_geolocation",
+      enableHighAccuracy: true,
+      generatedAt: new Date().toISOString(),
+      pointCount: points.length
+    },
+    bays: points
+  };
+}
+
+$("copyBtn").addEventListener("click", async () => {
+  const text = JSON.stringify(buildPayload(), null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("JSON copied.", "good");
+  } catch {
+    setStatus("Clipboard access failed. Use Export JSON.", "bad");
+  }
+});
+
+$("downloadBtn").addEventListener("click", () => {
+  const payload = buildPayload();
+  const name = [
+    payload.segment.street.replace(/\s+/g,"_"),
+    payload.segment.parkingAreaNumber || "AREA",
+    payload.segment.side || "SIDE"
+  ].join("-") + ".json";
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus("JSON exported.", "good");
+});
+
+$("clearBtn").addEventListener("click", () => {
+  if (!confirm("Clear all captured bays for this segment?")) return;
+  points = [];
+  render();
+  $("fix").hidden = true;
+  setStatus("Current segment capture cleared.");
+});
+
+restoreForm();
+render();
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+</html>

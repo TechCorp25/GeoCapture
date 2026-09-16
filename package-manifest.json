@@ -1,0 +1,11 @@
+{
+  "package": "CivicMAPS GPS Capture",
+  "purpose": "Parking-bay GPS field capture for CivicMAPS / EnforcementMaps",
+  "deployment_target": "Railway",
+  "entrypoint": "server.py",
+  "start_command": "python server.py",
+  "healthcheck": "/health",
+  "primary_instruction": "instructional-prompt.md",
+  "runtime_dependencies": "Python standard library only",
+  "data_storage": "Browser localStorage; JSON export; no server database"
+}

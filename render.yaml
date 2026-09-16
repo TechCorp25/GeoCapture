@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: geocapture
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /health
+    autoDeploy: yes
