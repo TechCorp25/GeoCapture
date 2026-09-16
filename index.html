@@ -27,6 +27,7 @@
       width:100%; border:1px solid var(--line); background:#0f172a; color:var(--text);
       border-radius:10px; padding:12px; font-size:16px;
     }
+    input:disabled, select:disabled { opacity:.45; cursor:not-allowed; }
     button {
       width:100%; border:0; border-radius:14px; padding:15px 16px; font-size:1rem;
       font-weight:700; cursor:pointer;
@@ -37,6 +38,13 @@
     .danger { background:#3a1518; color:#fecaca; border:1px solid #7f1d1d; }
     .row { display:flex; gap:10px; }
     .row > * { flex:1; }
+    .checkbox-row {
+      display:flex; align-items:flex-start; gap:10px; padding:11px 12px;
+      border:1px solid var(--line); border-radius:10px; background:#0f172a;
+    }
+    .checkbox-row input { width:auto; margin:3px 0 0; padding:0; accent-color:var(--accent); }
+    .checkbox-row label { margin:0; color:var(--text); font-size:.9rem; cursor:pointer; }
+    .checkbox-row label span { display:block; margin-top:3px; color:var(--muted); font-size:.76rem; font-weight:400; }
     .status { margin-top:10px; color:var(--muted); font-size:.9rem; min-height:1.4em; }
     .status.good { color:#86efac; } .status.warn { color:#fcd34d; } .status.bad { color:#fca5a5; }
     .fix {
@@ -82,12 +90,19 @@
           <option>NORTH</option><option>SOUTH</option><option>EAST</option><option>WEST</option>
         </select>
       </div>
+      <div class="full checkbox-row">
+        <input id="unnumbered" type="checkbox">
+        <label for="unnumbered">
+          Unnumbered / no-payment parking
+          <span>Use for bays without physical bay numbers, generally non-metered or timed-only restrictions. Payment and bay-number fields are not required.</span>
+        </label>
+      </div>
       <div>
         <label for="area">Parking area number</label>
         <input id="area" inputmode="numeric" placeholder="533">
       </div>
       <div>
-        <label for="easypark">EasyPark number</label>
+        <label for="easypark">EasyPark / PayStay area number</label>
         <input id="easypark" inputmode="numeric" placeholder="7391">
       </div>
       <div>
@@ -150,28 +165,49 @@ const fields = ["segment","betweenA","betweenB","side","area","easypark","startB
 let points = JSON.parse(localStorage.getItem("civicmaps_points") || "[]");
 
 function saveForm() {
-  const form = {};
+  const form = { unnumbered: $("unnumbered").checked };
   fields.forEach(id => form[id] = $(id).value);
   localStorage.setItem("civicmaps_form", JSON.stringify(form));
 }
 function restoreForm() {
   const form = JSON.parse(localStorage.getItem("civicmaps_form") || "{}");
   fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
+  $("unnumbered").checked = Boolean(form.unnumbered);
 }
 fields.forEach(id => $(id).addEventListener("change", saveForm));
 fields.forEach(id => $(id).addEventListener("input", saveForm));
+$("unnumbered").addEventListener("change", () => { saveForm(); updateModeUI(); });
 
+function isUnnumbered() {
+  return $("unnumbered").checked;
+}
 function currentBay() {
+  if (isUnnumbered()) return null;
   const start = parseInt($("startBay").value, 10);
   const direction = parseInt($("direction").value, 10);
   if (!Number.isFinite(start)) return null;
   return start + (points.length * direction);
 }
+function pointLabel(point, index) {
+  if (point.unnumbered || point.bay === null || point.bay === undefined) {
+    return `Unnumbered ${point.captureSequence || index + 1}`;
+  }
+  return String(point.bay);
+}
+function updateModeUI() {
+  const unnumbered = isUnnumbered();
+  ["area","easypark","startBay","direction"].forEach(id => $(id).disabled = unnumbered);
+  $("captureBtn").textContent = unnumbered ? "📍 Capture next unnumbered bay" : "📍 Capture next bay";
+  $("unnumbered").disabled = points.length > 0;
+}
 function validateMeta() {
-  const required = ["segment","betweenA","betweenB","side","area","easypark","startBay"];
+  const required = ["segment","betweenA","betweenB","side"];
+  if (!isUnnumbered()) required.push("area","easypark","startBay");
   const missing = required.filter(id => !$(id).value.trim());
   if (missing.length) {
-    throw new Error("Complete all segment fields before capture.");
+    throw new Error(isUnnumbered()
+      ? "Complete the street segment fields before capture."
+      : "Complete all numbered-bay segment fields before capture.");
   }
 }
 function setStatus(msg, cls="") {
@@ -179,15 +215,16 @@ function setStatus(msg, cls="") {
   $("status").className = "status " + cls;
 }
 function render() {
-  $("rows").innerHTML = points.map(p => `
+  $("rows").innerHTML = points.map((p, index) => `
     <tr>
-      <td>${p.bay}</td>
+      <td>${pointLabel(p, index)}</td>
       <td>${p.latitude.toFixed(8)}</td>
       <td>${p.longitude.toFixed(8)}</td>
       <td>${p.accuracy.toFixed(1)}</td>
     </tr>`).join("");
   $("count").textContent = points.length;
   localStorage.setItem("civicmaps_points", JSON.stringify(points));
+  updateModeUI();
 }
 function bestFixSingleTap() {
   return new Promise((resolve, reject) => {
@@ -228,13 +265,18 @@ $("captureBtn").addEventListener("click", async () => {
   try {
     validateMeta();
     const bay = currentBay();
+    const captureSequence = points.length + 1;
+    const unnumbered = isUnnumbered();
+    const label = unnumbered ? `unnumbered bay ${captureSequence}` : `bay ${bay}`;
     $("captureBtn").disabled = true;
-    setStatus(`Capturing bay ${bay}…`, "warn");
+    setStatus(`Capturing ${label}…`, "warn");
 
     const pos = await bestFixSingleTap();
     const c = pos.coords;
     const point = {
       bay,
+      unnumbered,
+      captureSequence,
       latitude: c.latitude,
       longitude: c.longitude,
       accuracy: c.accuracy,
@@ -248,13 +290,13 @@ $("captureBtn").addEventListener("click", async () => {
     render();
 
     $("fix").hidden = false;
-    $("mBay").textContent = bay;
+    $("mBay").textContent = pointLabel(point, points.length - 1);
     $("mAcc").textContent = `±${c.accuracy.toFixed(1)} m`;
     $("mLat").textContent = c.latitude.toFixed(8);
     $("mLon").textContent = c.longitude.toFixed(8);
 
     const cls = c.accuracy <= 5 ? "good" : (c.accuracy <= 10 ? "warn" : "bad");
-    setStatus(`Bay ${bay} captured. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
+    setStatus(`${unnumbered ? `Unnumbered bay ${captureSequence}` : `Bay ${bay}`} captured. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
   } catch (e) {
     setStatus(e.message, "bad");
   } finally {
@@ -270,6 +312,7 @@ $("undoBtn").addEventListener("click", () => {
 });
 
 function buildPayload() {
+  const unnumbered = isUnnumbered();
   return {
     schema: "civicmaps.parking_segment.v1",
     segment: {
@@ -279,8 +322,10 @@ function buildPayload() {
         $("betweenB").value.trim().toUpperCase()
       ],
       side: $("side").value,
-      parkingAreaNumber: $("area").value.trim(),
-      easyParkNumber: $("easypark").value.trim()
+      numberingMode: unnumbered ? "unnumbered" : "numbered",
+      paymentRequired: !unnumbered,
+      parkingAreaNumber: unnumbered ? null : $("area").value.trim(),
+      easyParkNumber: unnumbered ? null : $("easypark").value.trim()
     },
     capture: {
       source: "device_geolocation",
@@ -306,7 +351,7 @@ $("downloadBtn").addEventListener("click", () => {
   const payload = buildPayload();
   const name = [
     payload.segment.street.replace(/\s+/g,"_"),
-    payload.segment.parkingAreaNumber || "AREA",
+    payload.segment.parkingAreaNumber || (payload.segment.numberingMode === "unnumbered" ? "UNNUMBERED" : "AREA"),
     payload.segment.side || "SIDE"
   ].join("-") + ".json";
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
