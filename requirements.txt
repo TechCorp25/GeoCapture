@@ -1,1 +1,1 @@
-# No third-party Python dependencies. server.py uses the Python standard library only.
+pymongo==4.18.1
