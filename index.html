@@ -101,6 +101,14 @@
           <option value="1">Ascending (25, 26, 27…)</option>
         </select>
       </div>
+      <div>
+        <label for="requiredAccuracy">Required GPS accuracy</label>
+        <select id="requiredAccuracy">
+          <option value="3">Survey quality (±3 m)</option>
+          <option value="5" selected>Parking bay (±5 m)</option>
+          <option value="10">Reduced quality (±10 m)</option>
+        </select>
+      </div>
     </div>
   </section>
 
@@ -114,7 +122,7 @@
       <div class="metric"><span>Longitude</span><strong id="mLon">—</strong></div>
     </div>
     <div class="small" style="margin-top:10px">
-      One tap samples GPS for up to 6 seconds and keeps the most accurate live fix returned by the device.
+      Keep the phone still with a clear view of the sky. Each capture samples fresh, high-accuracy fixes for up to 30 seconds and saves only a fix that meets the selected accuracy requirement.
     </div>
   </section>
 
@@ -146,7 +154,11 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const fields = ["segment","betweenA","betweenB","side","area","easypark","startBay","direction"];
+const fields = ["segment","betweenA","betweenB","side","area","easypark","startBay","direction","requiredAccuracy"];
+const GPS_SAMPLE_MS = 30000;
+const GPS_MIN_SAMPLE_MS = 8000;
+const GPS_MIN_FIXES = 3;
+const GPS_FRESHNESS_TOLERANCE_MS = 2000;
 let points = JSON.parse(localStorage.getItem("civicmaps_points") || "[]");
 
 function saveForm() {
@@ -192,35 +204,61 @@ function render() {
 function bestFixSingleTap() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
+    const requiredAccuracy = Number($("requiredAccuracy").value);
+    const startedAt = Date.now();
     let best = null;
     let watchId = null;
     let done = false;
+    let freshFixCount = 0;
+    let timerId = null;
+    let statusTimerId = null;
 
-    const finish = () => {
+    const cleanUp = () => {
+      clearTimeout(timerId);
+      clearInterval(statusTimerId);
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    };
+    const finish = (timedOut = false) => {
       if (done) return;
       done = true;
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      if (best) resolve(best);
-      else reject(new Error("No GPS fix was returned."));
+      cleanUp();
+      if (best && best.coords.accuracy <= requiredAccuracy) return resolve({ position: best, sampleCount: freshFixCount, durationMs: Date.now() - startedAt });
+      if (best) return reject(new Error(`Best fix was ±${best.coords.accuracy.toFixed(1)} m, which does not meet the required ±${requiredAccuracy} m. Move into open sky, enable precise location, and retry.`));
+      reject(new Error(timedOut ? "No fresh GPS fix was returned. Enable precise location, move into open sky, and retry." : "GPS capture stopped before a usable fix was returned."));
     };
 
     watchId = navigator.geolocation.watchPosition(
       pos => {
+        if (done) return;
+        const c = pos.coords;
+        // Some browsers may still deliver an old cached fix first. Never use it.
+        if (pos.timestamp < startedAt - GPS_FRESHNESS_TOLERANCE_MS) return;
+        if (![c.latitude, c.longitude, c.accuracy].every(Number.isFinite) || c.accuracy <= 0) return;
+        freshFixCount += 1;
         if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
-        setStatus(`Sampling GPS… best accuracy ±${best.coords.accuracy.toFixed(1)} m`, best.coords.accuracy <= 5 ? "good" : "warn");
-        if (best.coords.accuracy <= 3) finish();
+        const elapsed = Date.now() - startedAt;
+        setStatus(`Acquiring GPS… ${freshFixCount} fresh fixes; best ±${best.coords.accuracy.toFixed(1)} m (need ±${requiredAccuracy} m)`, best.coords.accuracy <= requiredAccuracy ? "good" : "warn");
+        // Do not accept the first optimistic reading: give the receiver time to
+        // converge and require multiple live updates before ending early.
+        if (elapsed >= GPS_MIN_SAMPLE_MS && freshFixCount >= GPS_MIN_FIXES && best.coords.accuracy <= requiredAccuracy) finish();
       },
       err => {
-        if (!best) {
+        if (err.code === err.PERMISSION_DENIED) {
           done = true;
-          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-          reject(new Error(err.message || "GPS error."));
+          cleanUp();
+          reject(new Error("Precise location permission was denied. Allow precise location for this site and retry."));
         }
       },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: GPS_SAMPLE_MS }
     );
 
-    setTimeout(finish, 6000);
+    statusTimerId = setInterval(() => {
+      if (done) return;
+      const seconds = Math.max(0, Math.ceil((GPS_SAMPLE_MS - (Date.now() - startedAt)) / 1000));
+      const bestText = best ? `best ±${best.coords.accuracy.toFixed(1)} m` : "waiting for a fresh fix";
+      setStatus(`Acquiring GPS… ${bestText}; ${seconds}s remaining`, best && best.coords.accuracy <= requiredAccuracy ? "good" : "warn");
+    }, 1000);
+    timerId = setTimeout(() => finish(true), GPS_SAMPLE_MS);
   });
 }
 
@@ -231,7 +269,8 @@ $("captureBtn").addEventListener("click", async () => {
     $("captureBtn").disabled = true;
     setStatus(`Capturing bay ${bay}…`, "warn");
 
-    const pos = await bestFixSingleTap();
+    const result = await bestFixSingleTap();
+    const pos = result.position;
     const c = pos.coords;
     const point = {
       bay,
@@ -242,7 +281,10 @@ $("captureBtn").addEventListener("click", async () => {
       altitudeAccuracy: c.altitudeAccuracy,
       heading: c.heading,
       speed: c.speed,
-      capturedAt: new Date(pos.timestamp).toISOString()
+      capturedAt: new Date(pos.timestamp).toISOString(),
+      sampleCount: result.sampleCount,
+      samplingDurationMs: result.durationMs,
+      requiredAccuracy: Number($("requiredAccuracy").value)
     };
     points.push(point);
     render();
@@ -285,6 +327,7 @@ function buildPayload() {
     capture: {
       source: "device_geolocation",
       enableHighAccuracy: true,
+      requiredAccuracy: Number($("requiredAccuracy").value),
       generatedAt: new Date().toISOString(),
       pointCount: points.length
     },
