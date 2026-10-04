@@ -100,18 +100,33 @@
       <div class="full checkbox-row">
         <input id="unnumbered" type="checkbox">
         <label for="unnumbered">
-          Unnumbered / no-payment parking
-          <span>Use for bays without physical bay numbers, generally non-metered or timed-only restrictions. Payment and bay-number fields are not required.</span>
+          Unnumbered parking
+          <span>Use for bays without physical bay numbers. Area, payment and permit identifiers are independent of bay numbering.</span>
         </label>
       </div>
       <div>
         <label for="area">Parking area number</label>
-        <input id="area" inputmode="numeric" placeholder="533">
+        <input id="area" type="text" placeholder="533 or MCC-TA" autocomplete="off">
       </div>
       <div>
-        <label for="easypark">EasyPark / PayStay area number</label>
+        <label for="easypark">EasyPark / PayStay number</label>
         <input id="easypark" inputmode="numeric" placeholder="7391">
       </div>
+      <div>
+        <label for="permit">Permit Number</label>
+        <input id="permit" type="text" placeholder="MCC-TA" autocomplete="off">
+      </div>
+      <div class="full small">Enter at least one: parking area number, EasyPark / PayStay number, or permit number. Letters and hyphens are accepted in parking area and permit numbers.</div>
+      <div class="checkbox-row">
+        <input id="easyparkEnabled" type="checkbox" role="switch">
+        <label for="easyparkEnabled">EasyPark<span>Adds EP- to the payment number.</span></label>
+      </div>
+      <div class="checkbox-row">
+        <input id="paystayEnabled" type="checkbox" role="switch">
+        <label for="paystayEnabled">PayStay<span>Adds PS- to the payment number.</span></label>
+      </div>
+      <div id="paymentHint" class="full small" aria-live="polite">Leave both off for areas without EasyPark or PayStay.</div>
+      <button id="confirmNoProvider" class="full secondary" hidden>Confirm neither payment provider</button>
       <div>
         <label for="startBay">Starting bay number</label>
         <input id="startBay" inputmode="numeric" placeholder="28">
@@ -169,7 +184,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const fields = ["segment","betweenA","betweenB","side","area","easypark","startBay","direction"];
+const fields = ["segment","betweenA","betweenB","side","area","easypark","permit","startBay","direction"];
 const POINTS_KEY = "civicmaps_points";
 const FORM_KEY = "civicmaps_form";
 const SEGMENT_ID_KEY = "civicmaps_segment_id";
@@ -181,6 +196,7 @@ let segmentId = localStorage.getItem(SEGMENT_ID_KEY) || createSegmentId();
 let revision = parseInt(localStorage.getItem(REVISION_KEY) || "0", 10) || 0;
 let metadataSaveTimer = null;
 let mongoConfigured = null;
+let legacyPaymentNeedsReview = false;
 
 function createSegmentId() {
   const id = (crypto && crypto.randomUUID)
@@ -204,7 +220,8 @@ function bumpRevision() {
 }
 
 function saveForm() {
-  const form = { unnumbered: $("unnumbered").checked };
+  const form = { unnumbered: $("unnumbered").checked, paymentProvider: paymentProvider() };
+  form.legacyPaymentNeedsReview = legacyPaymentNeedsReview;
   fields.forEach(id => form[id] = $(id).value);
   localStorage.setItem(FORM_KEY, JSON.stringify(form));
 }
@@ -213,18 +230,61 @@ function restoreForm() {
   const form = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
   fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
   $("unnumbered").checked = Boolean(form.unnumbered);
+  // Only infer providers from an explicit prefix, never from the legacy shared field name.
+  const provider = Object.hasOwn(form, "paymentProvider") ? form.paymentProvider
+    : !form.unnumbered && /^EP-/i.test(form.easypark || "") ? "EasyPark"
+    : !form.unnumbered && /^PS-/i.test(form.easypark || "") ? "PayStay" : null;
+  $("easyparkEnabled").checked = provider === "EasyPark";
+  $("paystayEnabled").checked = provider === "PayStay";
+  legacyPaymentNeedsReview = Boolean(form.legacyPaymentNeedsReview ||
+    (!Object.hasOwn(form, "paymentProvider") && !form.unnumbered && form.easypark?.trim() && !provider));
 }
 
 fields.forEach(id => {
   $(id).addEventListener("input", () => {
+    updateModeUI();
     saveForm();
     scheduleMetadataPersist();
   });
   $(id).addEventListener("change", () => {
+    updateModeUI();
     saveForm();
     scheduleMetadataPersist();
   });
 });
+
+["easyparkEnabled", "paystayEnabled"].forEach(id => {
+  $(id).addEventListener("change", () => {
+    legacyPaymentNeedsReview = false;
+    if ($(id).checked) {
+      $(id === "easyparkEnabled" ? "paystayEnabled" : "easyparkEnabled").checked = false;
+    }
+    updateModeUI();
+    saveForm();
+    scheduleMetadataPersist();
+  });
+});
+
+$("confirmNoProvider").addEventListener("click", () => {
+  legacyPaymentNeedsReview = false;
+  updateModeUI();
+  saveForm();
+  scheduleMetadataPersist();
+});
+
+function paymentProvider() {
+  return $("easyparkEnabled").checked ? "EasyPark" : $("paystayEnabled").checked ? "PayStay" : null;
+}
+
+function paymentNumber() {
+  const provider = paymentProvider();
+  if (!provider) return null;
+  const entered = $("easypark").value.trim();
+  if (!entered) return null;
+  const number = entered.replace(/^(?:EP-|PS-)/i, "");
+  if (!/^\d+$/.test(number)) throw new Error("Enter a numeric EasyPark / PayStay number for the selected provider.");
+  return `${provider === "EasyPark" ? "EP" : "PS"}-${number}`;
+}
 
 $("unnumbered").addEventListener("change", () => {
   saveForm();
@@ -253,19 +313,36 @@ function pointLabel(point, index) {
 
 function updateModeUI() {
   const unnumbered = isUnnumbered();
-  ["area","easypark","startBay","direction"].forEach(id => $(id).disabled = unnumbered);
+  ["startBay","direction"].forEach(id => $(id).disabled = unnumbered);
+  const provider = paymentProvider();
+  $("easypark").disabled = !provider;
+  $("confirmNoProvider").hidden = !legacyPaymentNeedsReview;
+  $("paymentHint").textContent = legacyPaymentNeedsReview
+    ? "This saved segment predates provider selection. Choose EasyPark or PayStay above, or confirm neither provider before saving."
+    : provider
+    ? `${provider} selected. JSON prefix: ${provider === "EasyPark" ? "EP-" : "PS-"}.`
+    : $("easypark").value.trim()
+      ? "Saved payment number retained but inactive. Select its provider to include it, or leave both off to omit it."
+      : "Leave both off for areas without EasyPark or PayStay.";
   $("captureBtn").textContent = unnumbered ? "📍 Capture next unnumbered bay" : "📍 Capture next bay";
   $("unnumbered").disabled = points.length > 0;
 }
 
 function validateMeta() {
+  if (legacyPaymentNeedsReview) {
+    throw new Error("Select the provider for the saved payment number, or confirm neither payment provider.");
+  }
   const required = ["segment","betweenA","betweenB","side"];
-  if (!isUnnumbered()) required.push("area","easypark","startBay");
+  if (!isUnnumbered()) required.push("startBay");
   const missing = required.filter(id => !$(id).value.trim());
   if (missing.length) {
     throw new Error(isUnnumbered()
       ? "Complete the street segment fields before capture."
       : "Complete all numbered-bay segment fields before capture.");
+  }
+  const number = paymentNumber();
+  if (![$("area").value.trim(), number, $("permit").value.trim()].some(Boolean)) {
+    throw new Error("Enter at least one parking area number, EasyPark / PayStay number, or permit number. Enable the provider to use a payment number.");
   }
 }
 
@@ -293,9 +370,12 @@ function render() {
 }
 
 function buildPayload(savedReason="manual", storageState="active") {
+  validateMeta();
   const unnumbered = isUnnumbered();
+  const number = paymentNumber();
+  const provider = number ? paymentProvider() : null;
   return {
-    schema: "civicmaps.parking_segment.v2",
+    schema: "civicmaps.parking_segment.v3",
     segmentId,
     revision,
     segment: {
@@ -306,9 +386,13 @@ function buildPayload(savedReason="manual", storageState="active") {
       ],
       side: $("side").value,
       numberingMode: unnumbered ? "unnumbered" : "numbered",
-      paymentRequired: !unnumbered,
-      parkingAreaNumber: unnumbered ? null : $("area").value.trim(),
-      easyParkNumber: unnumbered ? null : $("easypark").value.trim()
+      paymentRequired: Boolean(provider),
+      parkingAreaNumber: $("area").value.trim() || null,
+      permitNumber: $("permit").value.trim() || null,
+      paymentProvider: provider,
+      paymentAreaNumber: number,
+      easyParkNumber: provider === "EasyPark" ? number : null,
+      payStayNumber: provider === "PayStay" ? number : null
     },
     capture: {
       source: "device_geolocation",
@@ -482,7 +566,13 @@ $("undoBtn").addEventListener("click", async () => {
 });
 
 $("copyBtn").addEventListener("click", async () => {
-  const text = JSON.stringify(buildPayload("export", "active"), null, 2);
+  let text;
+  try {
+    text = JSON.stringify(buildPayload("export", "active"), null, 2);
+  } catch (e) {
+    setStatus(e.message, "bad");
+    return;
+  }
   try {
     await navigator.clipboard.writeText(text);
     setStatus("JSON copied.", "good");
@@ -492,10 +582,17 @@ $("copyBtn").addEventListener("click", async () => {
 });
 
 $("downloadBtn").addEventListener("click", () => {
-  const payload = buildPayload("export", "active");
+  let payload;
+  try {
+    payload = buildPayload("export", "active");
+  } catch (e) {
+    setStatus(e.message, "bad");
+    return;
+  }
   const name = [
     payload.segment.street.replace(/\s+/g,"_"),
-    payload.segment.parkingAreaNumber || (payload.segment.numberingMode === "unnumbered" ? "UNNUMBERED" : "AREA"),
+    (payload.segment.parkingAreaNumber || payload.segment.permitNumber || payload.segment.paymentAreaNumber)
+      .replace(/[^a-zA-Z0-9_-]/g, "_"),
     payload.segment.side || "SIDE"
   ].join("-") + ".json";
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -80,6 +81,32 @@ def validate_segment_payload(payload):
         raise ValueError("segment.between must contain two street names.")
     if side not in {"NORTH", "SOUTH", "EAST", "WEST"}:
         raise ValueError("segment.side is invalid.")
+
+    # v2 clients remain readable/writable; v3 enforces the new identifier contract.
+    if payload.get("schema") == "civicmaps.parking_segment.v3":
+        for field in ("parkingAreaNumber", "permitNumber", "paymentAreaNumber", "easyParkNumber", "payStayNumber"):
+            value = segment.get(field)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"segment.{field} must be a non-empty string or null.")
+        if not any(segment.get(field) for field in ("parkingAreaNumber", "paymentAreaNumber", "permitNumber")):
+            raise ValueError("At least one parking area, payment area, or permit number is required.")
+        provider = segment.get("paymentProvider")
+        if provider is not None and provider not in ("EasyPark", "PayStay"):
+            raise ValueError("segment.paymentProvider must be EasyPark, PayStay, or null.")
+        number = segment.get("paymentAreaNumber")
+        if provider is None:
+            if any(segment.get(field) is not None for field in ("paymentAreaNumber", "easyParkNumber", "payStayNumber")):
+                raise ValueError("Payment numbers require a selected provider.")
+        else:
+            prefix = "EP" if provider == "EasyPark" else "PS"
+            if not isinstance(number, str) or not re.fullmatch(rf"{prefix}-[0-9]+", number):
+                raise ValueError("Payment number must have the selected provider prefix followed by digits.")
+            active = "easyParkNumber" if provider == "EasyPark" else "payStayNumber"
+            inactive = "payStayNumber" if provider == "EasyPark" else "easyParkNumber"
+            if segment.get(active) != number or segment.get(inactive) is not None:
+                raise ValueError("Provider-specific payment numbers must match the selected provider.")
+        if segment.get("paymentRequired") is not (provider is not None):
+            raise ValueError("segment.paymentRequired must match the payment provider selection.")
 
     for index, bay in enumerate(bays):
         if not isinstance(bay, dict):
