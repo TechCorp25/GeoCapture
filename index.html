@@ -137,7 +137,7 @@
       <div class="metric"><span>Longitude</span><strong id="mLon">—</strong></div>
     </div>
     <div class="small" style="margin-top:10px">
-      Each successful capture is retained locally immediately and then autosaved to the road-segment document in MongoDB.
+      One tap samples fresh high-accuracy fixes for up to 10 seconds and keeps the most accurate result. Each capture is retained locally immediately and then autosaved to MongoDB.
     </div>
   </section>
 
@@ -181,6 +181,9 @@ let segmentId = localStorage.getItem(SEGMENT_ID_KEY) || createSegmentId();
 let revision = parseInt(localStorage.getItem(REVISION_KEY) || "0", 10) || 0;
 let metadataSaveTimer = null;
 let mongoConfigured = null;
+
+const GPS_SAMPLE_MS = 10000;
+const GPS_TARGET_ACCURACY_METRES = 3;
 
 function createSegmentId() {
   const id = (crypto && crypto.randomUUID)
@@ -387,35 +390,64 @@ async function checkStorageHealth() {
 function bestFixSingleTap() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
+
     let best = null;
     let watchId = null;
+    let sampleTimer = null;
     let done = false;
+    let sampleCount = 0;
+    const startedAt = Date.now();
 
-    const finish = () => {
+    const cleanup = () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (sampleTimer !== null) clearTimeout(sampleTimer);
+    };
+
+    const finish = error => {
       if (done) return;
       done = true;
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      cleanup();
       if (best) resolve(best);
-      else reject(new Error("No GPS fix was returned."));
+      else reject(error || new Error("No fresh GPS fix was returned. Check precise location permission and try again outdoors."));
     };
 
     watchId = navigator.geolocation.watchPosition(
       pos => {
+        if (done) return;
+        const {latitude, longitude, accuracy} = pos.coords;
+        if (![latitude, longitude, accuracy].every(Number.isFinite) || accuracy < 0) return;
+
+        sampleCount += 1;
         if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
-        setStatus(`Sampling GPS… best accuracy ±${best.coords.accuracy.toFixed(1)} m`, best.coords.accuracy <= 5 ? "good" : "warn");
-        if (best.coords.accuracy <= 3) finish();
+        const secondsLeft = Math.max(0, Math.ceil((GPS_SAMPLE_MS - (Date.now() - startedAt)) / 1000));
+        setStatus(
+          `Sampling GPS… ${sampleCount} fix${sampleCount === 1 ? "" : "es"}, best ±${best.coords.accuracy.toFixed(1)} m (${secondsLeft}s left)`,
+          best.coords.accuracy <= 5 ? "good" : "warn"
+        );
+
+        // A device-reported three-metre fix already meets field accuracy needs;
+        // otherwise use the entire sampling window to allow GPS to converge.
+        if (best.coords.accuracy <= GPS_TARGET_ACCURACY_METRES) finish();
       },
       err => {
-        if (!best) {
-          done = true;
-          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-          reject(new Error(err.message || "GPS error."));
-        }
+        if (done || best) return;
+        const messages = {
+          1: "Location permission was denied. Enable precise location access and try again.",
+          2: "A location fix is unavailable. Move outdoors with a clear view of the sky and try again.",
+          3: "The GPS request timed out. Try again outdoors."
+        };
+        finish(new Error(messages[err.code] || err.message || "GPS error."));
       },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        // The browser timeout applies to each watch request. Keep it slightly
+        // longer than our own sampling window so that the window controls exit.
+        timeout: GPS_SAMPLE_MS + 5000
+      }
     );
 
-    setTimeout(finish, 6000);
+    sampleTimer = setTimeout(() => finish(), GPS_SAMPLE_MS);
   });
 }
 
