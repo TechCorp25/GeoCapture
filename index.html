@@ -222,7 +222,14 @@ function bestFixSingleTap() {
       if (done) return;
       done = true;
       cleanUp();
-      if (best && best.coords.accuracy <= requiredAccuracy) return resolve({ position: best, sampleCount: freshFixCount, durationMs: Date.now() - startedAt });
+      if (best && best.coords.accuracy <= requiredAccuracy) {
+        return resolve({
+          position: best,
+          sampleCount: freshFixCount,
+          durationMs: Date.now() - startedAt,
+          requiredAccuracy
+        });
+      }
       if (best) return reject(new Error(`Best fix was ±${best.coords.accuracy.toFixed(1)} m, which does not meet the required ±${requiredAccuracy} m. Move into open sky, enable precise location, and retry.`));
       reject(new Error(timedOut ? "No fresh GPS fix was returned. Enable precise location, move into open sky, and retry." : "GPS capture stopped before a usable fix was returned."));
     };
@@ -243,7 +250,7 @@ function bestFixSingleTap() {
         if (elapsed >= GPS_MIN_SAMPLE_MS && freshFixCount >= GPS_MIN_FIXES && best.coords.accuracy <= requiredAccuracy) finish();
       },
       err => {
-        if (err.code === err.PERMISSION_DENIED) {
+        if (err.code === 1) {
           done = true;
           cleanUp();
           reject(new Error("Precise location permission was denied. Allow precise location for this site and retry."));
@@ -284,7 +291,9 @@ $("captureBtn").addEventListener("click", async () => {
       capturedAt: new Date(pos.timestamp).toISOString(),
       sampleCount: result.sampleCount,
       samplingDurationMs: result.durationMs,
-      requiredAccuracy: Number($("requiredAccuracy").value)
+      // Use the threshold captured when sampling began. The operator may have
+      // changed the form control while the asynchronous acquisition was active.
+      requiredAccuracy: result.requiredAccuracy
     };
     points.push(point);
     render();
