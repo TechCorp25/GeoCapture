@@ -1,5 +1,13 @@
 # GeoCapture
 
+Mobile parking-bay location capture with a strict, operator-selectable GPS quality gate.
+
+## GPS quality
+
+Each capture requests uncached high-accuracy browser geolocation updates for up to 30 seconds. It discards stale or invalid readings, requires multiple fresh fixes before accepting early, and retains the fix with the best device-reported accuracy. A point is **not saved** unless it meets the selected accuracy requirement (±5 m by default). The handset's precise-location setting, GPS hardware, surroundings, and satellite visibility still determine the accuracy available; use the application outdoors with a clear view of the sky.
+
+The reported accuracy, number of fresh samples, sampling duration, and required accuracy are included with each exported point. Captures are retained locally immediately and autosaved to MongoDB when configured; JSON export remains available offline.
+
 ## Parking identifiers
 
 Enter at least one of **Parking area number**, **EasyPark / PayStay number**, or
@@ -55,10 +63,9 @@ Configure `MONGODB_URI` for database saves. Without it, captures remain local an
 JSON export works. Open `http://localhost:8080` locally; use HTTPS on a handset.
 
 ```sh
-node --test tests/identifiers.test.cjs
+node --test tests/*.test.cjs
 python -m unittest discover -s tests -v
 ```
 
-The service-worker shell cache is versioned for this update. Close all app tabs
-and reopen after deployment to let a waiting worker activate. Local capture data
+The service-worker shell cache is versioned for this update. The updated worker activates automatically; reload the app after deployment to load the new interface. Local capture data
 is retained across this update.
