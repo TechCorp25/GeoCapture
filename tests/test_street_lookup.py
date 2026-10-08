@@ -149,6 +149,15 @@ class NetworkTests(unittest.TestCase):
         self.assertIn("residential", query)
         self.assertNotIn("footway", query)
 
+    def test_connection_diagnostics_include_safe_system_code(self):
+        error = URLError(ConnectionRefusedError(111, "SECRET LOCATION"))
+        with patch.object(streets, "urlopen", side_effect=error), self.assertLogs(level="WARNING") as logs:
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.fetch_json("https://example.invalid")
+        self.assertIn("reason=ConnectionRefusedError errno=111", str(logs.output))
+        self.assertNotIn("SECRET", str(logs.output))
+        self.assertNotIn("LOCATION", str(logs.output))
+
 
 class HTTPTests(unittest.TestCase):
     @classmethod

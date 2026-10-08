@@ -83,8 +83,15 @@ def fetch_json(request, timeout=15):
         logging.warning("Street provider request failed: HTTP %s", exc.code)
         raise LookupUnavailable(f"Location provider returned HTTP {exc.code}. Enter the street details manually or retry later.") from None
     except (TimeoutError, URLError) as exc:
-        # Exception text / URLs may include keys and coordinates; log only type.
-        logging.warning("Street provider request failed: %s", type(exc).__name__)
+        # Exception text / URLs may include keys and coordinates. Log only
+        # exception classes and numeric system codes to diagnose DNS/TLS failures.
+        reason = exc.reason if isinstance(exc, URLError) else exc
+        error_number = getattr(reason, "errno", None)
+        verify_code = getattr(reason, "verify_code", None)
+        logging.warning("Street provider connection failed: %s reason=%s errno=%s tls_code=%s",
+                        type(exc).__name__, type(reason).__name__,
+                        error_number if isinstance(error_number, int) else None,
+                        verify_code if isinstance(verify_code, int) else None)
         raise LookupUnavailable("Location provider connection failed or timed out. Enter the street details manually or retry.") from None
     except Exception as exc:
         logging.warning("Street provider response failed: %s", type(exc).__name__)
