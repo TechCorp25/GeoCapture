@@ -1,5 +1,6 @@
 """On-demand street metadata suggestions. Never replaces surveyed bay coordinates."""
 import json
+import logging
 import math
 import os
 import re
@@ -7,6 +8,7 @@ import threading
 import time
 from collections import defaultdict, deque
 from urllib.parse import urlencode
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -77,7 +79,15 @@ def fetch_json(request, timeout=15):
         if not isinstance(data, dict):
             raise ValueError("Unexpected response")
         return data
-    except Exception:
+    except HTTPError as exc:
+        logging.warning("Street provider request failed: HTTP %s", exc.code)
+        raise LookupUnavailable(f"Location provider returned HTTP {exc.code}. Enter the street details manually or retry later.") from None
+    except (TimeoutError, URLError) as exc:
+        # Exception text / URLs may include keys and coordinates; log only type.
+        logging.warning("Street provider request failed: %s", type(exc).__name__)
+        raise LookupUnavailable("Location provider connection failed or timed out. Enter the street details manually or retry.") from None
+    except Exception as exc:
+        logging.warning("Street provider response failed: %s", type(exc).__name__)
         # Provider errors may contain the API key or location. Do not surface them.
         raise LookupUnavailable("Location provider is unavailable. Enter the street details manually or retry.") from None
 
@@ -85,8 +95,12 @@ def fetch_json(request, timeout=15):
 def road_network(lat, lon):
     # All ways touching seed nodes are included, preventing artificial dead ends
     # at OSM way splits. Names never enter this query (no query injection).
-    query = (f"[out:json][timeout:15];way(around:{QUERY_RADIUS},{lat:.7f},{lon:.7f})[highway]->.roads;"
-             "node(w.roads)->.nodes;way(bn.nodes)[highway]->.connected;"
+    road_filter = '[highway~"^(' + "|".join(sorted(ROAD_TYPES)) + ')$"]'
+    neighbourhood = f"(around:{QUERY_RADIUS},{lat:.7f},{lon:.7f})"
+    # An OSM way can extend kilometres outside the search area. Expand junctions
+    # only at nearby nodes, rather than fetching neighbours along its full length.
+    query = (f"[out:json][timeout:15][maxsize:67108864];way{neighbourhood}{road_filter}->.roads;"
+             f"node(w.roads){neighbourhood}->.nodes;way(bn.nodes){road_filter}->.connected;"
              "(.roads;.connected;);out body;>;out skel qt;")
     endpoint = os.environ.get("OVERPASS_API_URL", "https://overpass-api.de/api/interpreter")
     if not endpoint.startswith("https://"):

@@ -6,6 +6,8 @@ import unittest
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs
 
 import street_lookup as streets
 from server import Handler
@@ -121,6 +123,31 @@ class NetworkTests(unittest.TestCase):
                 streets.lookup({"latitude": 0, "longitude": 0, "accuracy": 5})
         finally:
             streets._requests.clear()
+
+    def test_http_diagnostics_do_not_expose_provider_url_or_key(self):
+        error = HTTPError("https://example.invalid/?key=SECRET&lat=LOCATION", 504, "SECRET", {}, None)
+        with patch.object(streets, "urlopen", side_effect=error), self.assertLogs(level="WARNING") as logs:
+            with self.assertRaises(streets.LookupUnavailable) as caught:
+                streets.fetch_json("https://example.invalid")
+        self.assertIn("HTTP 504", str(caught.exception))
+        self.assertNotIn("SECRET", str(caught.exception) + str(logs.output))
+        self.assertNotIn("LOCATION", str(caught.exception) + str(logs.output))
+
+    def test_connection_diagnostics_hide_exception_details(self):
+        with patch.object(streets, "urlopen", side_effect=URLError("SECRET")), self.assertLogs(level="WARNING") as logs:
+            with self.assertRaises(streets.LookupUnavailable) as caught:
+                streets.fetch_json("https://example.invalid")
+        self.assertIn("connection failed", str(caught.exception))
+        self.assertNotIn("SECRET", str(caught.exception) + str(logs.output))
+
+    def test_provider_query_bounds_junction_expansion_and_filters_road_types(self):
+        with patch.object(streets, "fetch_json", return_value={"elements": []}) as fetch:
+            streets.road_network(-37.8, 144.9)
+        request = fetch.call_args.args[0]
+        query = parse_qs(request.data.decode())["data"][0]
+        self.assertIn("node(w.roads)(around:800,-37.8000000,144.9000000)", query)
+        self.assertIn("residential", query)
+        self.assertNotIn("footway", query)
 
 
 class HTTPTests(unittest.TestCase):
