@@ -34,6 +34,8 @@
     }
     .capture { background:var(--accent); color:#082f49; font-size:1.12rem; min-height:58px; }
     .capture[disabled] { opacity:.55; cursor:not-allowed; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .small a { color:var(--accent); }
     .secondary { background:#1e293b; color:var(--text); border:1px solid var(--line); }
     .danger { background:#3a1518; color:#fecaca; border:1px solid #7f1d1d; }
     .row { display:flex; gap:10px; }
@@ -78,6 +80,13 @@
 
   <section class="card">
     <div class="grid">
+      <div class="full">
+        <button id="locateStreetBtn" class="secondary">📍 Auto-fill street &amp; between streets</button>
+        <div id="locationHint" class="small" style="margin-top:8px">Uses a fresh GPS fix to suggest this street and its boundaries. All fields remain editable. Existing entries are kept; clear a field to fill it again.</div>
+        <div id="locationStatus" class="status" role="status" aria-live="polite"></div>
+        <div id="locationAttribution" class="small" hidden>Street suggestions: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a>. Check signs and boundaries on site.</div>
+        <div id="googleReference" style="font-size:16px;margin-top:8px" hidden></div>
+      </div>
       <div class="full">
         <label for="segment">Street segment name</label>
         <input id="segment" placeholder="ELIZABETH STREET" autocomplete="off">
@@ -205,6 +214,14 @@ let revision = parseInt(localStorage.getItem(REVISION_KEY) || "0", 10) || 0;
 let metadataSaveTimer = null;
 let mongoConfigured = null;
 let legacyPaymentNeedsReview = false;
+let locationAttribution = null;
+let autoLocationFields = {};
+let lastLookupFix = null;
+let locationRequest = 0;
+let locationController = null;
+let locationBusy = false;
+let locationEditVersion = 0;
+let locationSettings = null;
 
 const GPS_SAMPLE_MS = 30000;
 const GPS_MIN_SAMPLE_MS = 8000;
@@ -235,12 +252,17 @@ function bumpRevision() {
 function saveForm() {
   const form = { unnumbered: $("unnumbered").checked, paymentProvider: paymentProvider() };
   form.legacyPaymentNeedsReview = legacyPaymentNeedsReview;
+  form.locationAttribution = locationAttribution;
+  form.autoLocationFields = autoLocationFields;
   fields.forEach(id => form[id] = $(id).value);
   localStorage.setItem(FORM_KEY, JSON.stringify(form));
 }
 
 function restoreForm() {
   const form = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
+  locationAttribution = form.locationAttribution || null;
+  autoLocationFields = form.autoLocationFields || {};
+  $("locationAttribution").hidden = !locationAttribution;
   fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
   $("unnumbered").checked = Boolean(form.unnumbered);
   // Only infer providers from an explicit prefix, never from the legacy shared field name.
@@ -255,6 +277,7 @@ function restoreForm() {
 
 fields.forEach(id => {
   $(id).addEventListener("input", () => {
+    if (["segment", "betweenA", "betweenB"].includes(id)) locationFieldEdited(id);
     updateModeUI();
     saveForm();
     scheduleMetadataPersist();
@@ -393,6 +416,7 @@ function buildPayload(savedReason="manual", storageState="active") {
     revision,
     segment: {
       street: $("segment").value.trim().toUpperCase(),
+      ...(locationAttribution ? {locationAttribution} : {}),
       between: [
         $("betweenA").value.trim().toUpperCase(),
         $("betweenB").value.trim().toUpperCase()
@@ -482,6 +506,157 @@ async function checkStorageHealth() {
   }
 }
 
+function locationMessage(message, cls="") {
+  $("locationStatus").textContent = message;
+  $("locationStatus").className = "status " + cls;
+}
+
+function locationFieldEdited(id) {
+  locationEditVersion += 1;
+  delete autoLocationFields[id];
+  if (id === "segment") {
+    // Boundaries suggested for the previous street are no longer applicable.
+    for (const boundary of ["betweenA", "betweenB"]) {
+      if (autoLocationFields[boundary] && $(boundary).value === autoLocationFields[boundary]) {
+        $(boundary).value = "";
+      }
+      delete autoLocationFields[boundary];
+    }
+    $("googleReference").hidden = true;
+    locationMessage("Street edited. Check any retained boundaries; leave the field to look up blank boundaries using the recent fix.");
+  }
+}
+
+async function getLocationSettings() {
+  if (locationSettings) return locationSettings;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch("/api/location/config", {cache:"no-store", signal:controller.signal});
+    if (!response.ok) throw new Error("Street lookup is unavailable. Enter the details manually.");
+    locationSettings = await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+  $("locationHint").textContent = locationSettings.googleReferenceEnabled
+    ? "On request, your GPS location is sent to OpenStreetMap's road provider and Google. Saved suggestions use OpenStreetMap; Google is an on-screen reference only. Every field is editable. Clear existing entries to replace them."
+    : "On request, your GPS location is sent to OpenStreetMap's road provider to suggest this street and its boundaries. Every field is editable. Clear existing entries to replace them.";
+  return locationSettings;
+}
+
+async function autoFillLocation(reuseFix=false) {
+  if (locationBusy) return;
+  if (navigator.onLine === false) {
+    locationMessage("Street lookup needs internet. Manual entry and local capture remain available.", "warn");
+    return;
+  }
+  if (points.length) {
+    locationMessage("This segment already has captured bays. Edit its fields manually, or finish it before looking up a new segment.", "warn");
+    return;
+  }
+  const request = ++locationRequest;
+  const identity = segmentId;
+  const editVersion = locationEditVersion;
+  const initial = Object.fromEntries(["segment", "betweenA", "betweenB"].map(id => [id, $(id).value]));
+  locationBusy = true;
+  $("locateStreetBtn").disabled = true;
+  $("captureBtn").disabled = true;
+  $("clearBtn").disabled = true;
+  $("googleReference").hidden = true;
+  let timer;
+  try {
+    locationController = new AbortController();
+    const controller = locationController;
+    const settings = await getLocationSettings();
+    if (!settings.enabled) throw new Error("Street lookup is disabled. Enter the details manually.");
+    locationMessage("Acquiring a fresh GPS fix for the street…", "warn");
+    if (!reuseFix || !lastLookupFix || Date.now() - lastLookupFix.timestamp > 60000) {
+      const fix = await bestFixSingleTap();
+      lastLookupFix = fix.position;
+    }
+    if (request !== locationRequest || identity !== segmentId) return;
+    if (editVersion !== locationEditVersion) {
+      locationMessage("Fields changed during GPS acquisition. Entries kept; tap auto-fill again.", "warn");
+      return;
+    }
+    locationMessage("Finding the street and adjoining boundaries…", "warn");
+    timer = setTimeout(() => controller.abort(), 35000);
+    const response = await fetch("/api/location/suggest", {
+      method:"POST", cache:"no-store", signal:controller.signal,
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({latitude:lastLookupFix.coords.latitude, longitude:lastLookupFix.coords.longitude,
+        accuracy:lastLookupFix.coords.accuracy, street:initial.segment.trim()})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Street lookup failed. Enter the details manually.");
+    if (request !== locationRequest || identity !== segmentId) return;
+    if (editVersion !== locationEditVersion) {
+      locationMessage("Fields changed during lookup. Entries kept; tap auto-fill again.", "warn");
+      return;
+    }
+    const suggestions = {segment:result.street, betweenA:result.between?.[0], betweenB:result.between?.[1]};
+    let filled = 0;
+    // A/B are unordered in the schema. Align a known boundary before filling
+    // the other, so a retained A cannot also be inserted into B.
+    const normal = value => (value || "").trim().toUpperCase();
+    if (normal(initial.betweenA) && normal(initial.betweenA) === normal(suggestions.betweenB) ||
+        normal(initial.betweenB) && normal(initial.betweenB) === normal(suggestions.betweenA)) {
+      [suggestions.betweenA, suggestions.betweenB] = [suggestions.betweenB, suggestions.betweenA];
+    }
+    const retainedBoundaryMismatch = ["betweenA", "betweenB"].some(id =>
+      initial[id].trim() && normal(initial[id]) !== normal(suggestions[id]));
+    if (retainedBoundaryMismatch) {
+      suggestions.betweenA = null;
+      suggestions.betweenB = null;
+    }
+    for (const [id, value] of Object.entries(suggestions)) {
+      if (typeof value === "string" && value.trim() && !initial[id].trim() && $(id).value === initial[id]) {
+        $(id).value = value.toUpperCase();
+        autoLocationFields[id] = $(id).value;
+        filled += 1;
+      }
+    }
+    if (filled) {
+      locationAttribution = result.attribution;
+      $("locationAttribution").hidden = false;
+      saveForm();
+      scheduleMetadataPersist();
+    }
+    if (result.googleReference) {
+      // Deliberately excluded from form state, JSON export and MongoDB payload.
+      $("googleReference").textContent = `Google Maps reference: ${result.googleReference} (display only)`;
+      $("googleReference").hidden = false;
+    }
+    const warnings = Array.isArray(result.warnings) ? result.warnings.join(" ") : "";
+    const candidates = !result.street && result.candidates?.length ? ` Nearby streets: ${result.candidates.join(", ")}.` : "";
+    locationMessage(`${filled ? `${filled} field${filled === 1 ? "" : "s"} filled. Check the suggestions on site.` : "Existing entries kept. Clear a field to fill it again."} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`,
+      warnings || retainedBoundaryMismatch ? "warn" : "good");
+    setStatus("Street lookup complete. Review the metadata before capturing a bay.");
+  } catch (error) {
+    if (request === locationRequest) {
+      locationMessage(error.name === "AbortError" ? "Street lookup timed out. Enter the details manually or retry." : error.message, "warn");
+    }
+  } finally {
+    clearTimeout(timer);
+    if (request === locationRequest) {
+      locationBusy = false;
+      locationController = null;
+      $("locateStreetBtn").disabled = false;
+      $("captureBtn").disabled = false;
+      $("clearBtn").disabled = false;
+    }
+  }
+}
+
+$("locateStreetBtn").addEventListener("click", () => autoFillLocation());
+$("segment").addEventListener("change", () => {
+  saveForm();
+  scheduleMetadataPersist();
+  if (lastLookupFix && Date.now() - lastLookupFix.timestamp <= 60000 && $("segment").value.trim()) {
+    autoFillLocation(true);
+  }
+});
+
 function bestFixSingleTap() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
@@ -552,6 +727,7 @@ function bestFixSingleTap() {
 }
 
 $("captureBtn").addEventListener("click", async () => {
+  if (locationBusy) return;
   try {
     validateMeta();
     const bay = currentBay();
@@ -560,6 +736,8 @@ $("captureBtn").addEventListener("click", async () => {
     const label = unnumbered ? `unnumbered bay ${captureSequence}` : `bay ${bay}`;
 
     $("captureBtn").disabled = true;
+    $("locateStreetBtn").disabled = true;
+    $("clearBtn").disabled = true;
     setStatus(`Capturing ${label}…`, "warn");
 
     const result = await bestFixSingleTap();
@@ -600,6 +778,8 @@ $("captureBtn").addEventListener("click", async () => {
     setStatus(e.message, "bad");
   } finally {
     $("captureBtn").disabled = false;
+    $("locateStreetBtn").disabled = false;
+    $("clearBtn").disabled = false;
   }
 });
 
@@ -674,6 +854,19 @@ $("clearBtn").addEventListener("click", async () => {
   }
 
   points = [];
+  locationRequest += 1;
+  locationController?.abort();
+  locationBusy = false;
+  lastLookupFix = null;
+  autoLocationFields = {};
+  locationAttribution = null;
+  ["segment", "betweenA", "betweenB", "side"].forEach(id => $(id).value = "");
+  $("locateStreetBtn").disabled = false;
+  $("captureBtn").disabled = false;
+  $("googleReference").hidden = true;
+  $("locationAttribution").hidden = true;
+  locationMessage("Ready to look up the next street segment.");
+  saveForm();
   startNewSegmentIdentity();
   render();
   $("fix").hidden = true;
@@ -691,6 +884,7 @@ window.addEventListener("online", () => {
 restoreForm();
 render();
 checkStorageHealth();
+getLocationSettings().catch(() => {});
 
 if (points.length) {
   setTimeout(() => persistSegment("startup_retry", "active", revision < 1), 500);
