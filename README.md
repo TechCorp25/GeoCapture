@@ -43,11 +43,10 @@ Before enabling Google in production, provide the application Terms of Use and
 Privacy Policy required by Google. Google results are displayed with attribution
 without a map and are not cached or saved by this application.
 
-The feature is disabled in the Render blueprint until the operator approves the
-additional road-data provider. Local tests use synthetic road networks / provider
-responses. A live Overpass check was blocked by automatic approval review because
-only Google had been proposed by the user. No live provider verification or Google
-API-key verification is claimed by this change.
+The operator approved OpenStreetMap lookup and production activation on 8 October
+2026. The Render blueprint enables lookup; other deployments remain opt-in via
+`STREET_LOOKUP_ENABLED=true`. Automated tests use synthetic road networks and
+provider responses. Google is optional and requires its own configured key.
 
 Lookups send the requested coordinate to the configured road provider and, only
 when its key is configured, Google. There is no background location watching,
