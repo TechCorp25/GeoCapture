@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from pymongo import MongoClient, ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
+from street_lookup import config as lookup_config, lookup, LookupBusy, LookupUnavailable
 
 PORT = int(os.environ.get("PORT", "8080"))
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -175,6 +176,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
 
+        if path == "/api/location/config":
+            self.send_json(200, lookup_config())
+            return
+
         if path == "/health":
             self.send_json(
                 200,
@@ -207,8 +212,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        if path != "/api/segments":
+        if path not in {"/api/segments", "/api/location/suggest"}:
             self.send_json(404, {"error": "Not found."})
+            return
+
+        if path == "/api/location/suggest" and self.headers.get_content_type() != "application/json":
+            self.send_json(415, {"error": "Use application/json for street lookup."})
             return
 
         try:
@@ -219,12 +228,15 @@ class Handler(SimpleHTTPRequestHandler):
         if length <= 0:
             self.send_json(400, {"error": "JSON body is required."})
             return
-        if length > 2_000_000:
+        if length > (2048 if path == "/api/location/suggest" else 2_000_000):
             self.send_json(413, {"error": "Segment payload is too large."})
             return
 
         try:
             payload = json.loads(self.rfile.read(length))
+            if path == "/api/location/suggest":
+                self.send_json(200, lookup(payload))
+                return
             document, idempotent = save_segment(payload)
             self.send_json(
                 200,
@@ -237,8 +249,12 @@ class Handler(SimpleHTTPRequestHandler):
                     "updatedAt": document["updatedAt"],
                 },
             )
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self.send_json(400, {"error": "Invalid JSON."})
+        except LookupBusy as exc:
+            self.send_json(429, {"error": str(exc)})
+        except LookupUnavailable as exc:
+            self.send_json(503, {"error": str(exc)})
         except ValueError as exc:
             status = 409 if str(exc).startswith("Stale segment revision") else 400
             self.send_json(status, {"error": str(exc)})
@@ -248,7 +264,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(503, {"error": "MongoDB is temporarily unavailable."})
 
     def end_headers(self):
-        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Cache-Control", "no-store" if self.path.startswith("/api/location/") else "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
