@@ -76,15 +76,14 @@
 <body>
 <main>
   <h1>CivicMAPS GPS Capture</h1>
-  <div class="sub">Parking bay field capture for EnforcementMaps</div>
+  <div class="sub">GeoCapture · Engineering data capture</div>
 
   <section class="card">
     <div class="grid">
       <div class="full">
         <button id="locateStreetBtn" class="secondary">📍 Auto-fill street &amp; between streets</button>
-        <div id="locationHint" class="small" style="margin-top:8px">Uses a fresh GPS fix to suggest this street and its boundaries. All fields remain editable. Existing entries are kept; clear a field to fill it again.</div>
         <div id="locationStatus" class="status" role="status" aria-live="polite"></div>
-        <div id="locationAttribution" class="small" hidden>Street suggestions: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a>. Check signs and boundaries on site.</div>
+        <div id="locationAttribution" class="small" hidden><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors · ODbL</a></div>
         <div id="googleReference" style="font-size:16px;margin-top:8px" hidden></div>
       </div>
       <div class="full">
@@ -110,7 +109,6 @@
         <input id="unnumbered" type="checkbox">
         <label for="unnumbered">
           Unnumbered parking
-          <span>Use for bays without physical bay numbers. Area, payment and permit identifiers are independent of bay numbering.</span>
         </label>
       </div>
       <div>
@@ -125,16 +123,15 @@
         <label for="permit">Permit Number</label>
         <input id="permit" type="text" placeholder="MCC-TA" autocomplete="off">
       </div>
-      <div class="full small">Enter at least one: parking area number, EasyPark / PayStay number, or permit number. Letters and hyphens are accepted in parking area and permit numbers.</div>
       <div class="checkbox-row">
         <input id="easyparkEnabled" type="checkbox" role="switch">
-        <label for="easyparkEnabled">EasyPark<span>Adds EP- to the payment number.</span></label>
+        <label for="easyparkEnabled">EasyPark</label>
       </div>
       <div class="checkbox-row">
         <input id="paystayEnabled" type="checkbox" role="switch">
-        <label for="paystayEnabled">PayStay<span>Adds PS- to the payment number.</span></label>
+        <label for="paystayEnabled">PayStay</label>
       </div>
-      <div id="paymentHint" class="full small" aria-live="polite">Leave both off for areas without EasyPark or PayStay.</div>
+      <div id="paymentHint" class="full small" aria-live="polite"></div>
       <button id="confirmNoProvider" class="full secondary" hidden>Confirm neither payment provider</button>
       <div>
         <label for="startBay">Starting bay number</label>
@@ -160,16 +157,13 @@
 
   <section class="card">
     <button id="captureBtn" class="capture">📍 Capture next bay</button>
-    <div id="status" class="status">Ready. GPS requires HTTPS and precise location permission.</div>
+    <div id="status" class="status">Ready.</div>
     <div id="storageStatus" class="storage">Storage: checking database configuration…</div>
     <div id="fix" class="fix" hidden>
       <div class="metric"><span>Bay</span><strong id="mBay">—</strong></div>
       <div class="metric"><span>Accuracy</span><strong id="mAcc">—</strong></div>
       <div class="metric"><span>Latitude</span><strong id="mLat">—</strong></div>
       <div class="metric"><span>Longitude</span><strong id="mLon">—</strong></div>
-    </div>
-    <div class="small" style="margin-top:10px">
-      Keep the phone still with a clear view of the sky. Each capture samples fresh, high-accuracy fixes for up to 30 seconds and saves only a fix that meets the selected accuracy requirement.
     </div>
   </section>
 
@@ -354,12 +348,12 @@ function updateModeUI() {
   $("easypark").disabled = !provider;
   $("confirmNoProvider").hidden = !legacyPaymentNeedsReview;
   $("paymentHint").textContent = legacyPaymentNeedsReview
-    ? "This saved segment predates provider selection. Choose EasyPark or PayStay above, or confirm neither provider before saving."
+    ? "Select a payment provider or confirm neither."
     : provider
-    ? `${provider} selected. JSON prefix: ${provider === "EasyPark" ? "EP-" : "PS-"}.`
+    ? `${provider === "EasyPark" ? "EP-" : "PS-"} prefix`
     : $("easypark").value.trim()
-      ? "Saved payment number retained but inactive. Select its provider to include it, or leave both off to omit it."
-      : "Leave both off for areas without EasyPark or PayStay.";
+      ? "Saved payment number inactive."
+      : "";
   $("captureBtn").textContent = unnumbered ? "📍 Capture next unnumbered bay" : "📍 Capture next bay";
   $("unnumbered").disabled = points.length > 0;
 }
@@ -523,7 +517,7 @@ function locationFieldEdited(id) {
       delete autoLocationFields[boundary];
     }
     $("googleReference").hidden = true;
-    locationMessage("Street edited. Check any retained boundaries; leave the field to look up blank boundaries using the recent fix.");
+    locationMessage("Street edited.");
   }
 }
 
@@ -538,9 +532,6 @@ async function getLocationSettings() {
   } finally {
     clearTimeout(timer);
   }
-  $("locationHint").textContent = locationSettings.googleReferenceEnabled
-    ? "On request, your GPS location is sent to OpenStreetMap's road provider and Google. Saved suggestions use OpenStreetMap; Google is an on-screen reference only. Every field is editable. Clear existing entries to replace them."
-    : "On request, your GPS location is sent to OpenStreetMap's road provider to suggest this street and its boundaries. Every field is editable. Clear existing entries to replace them.";
   return locationSettings;
 }
 
@@ -571,7 +562,7 @@ async function autoFillLocation(reuseFix=false) {
     if (!settings.enabled) throw new Error("Street lookup is disabled. Enter the details manually.");
     locationMessage("Acquiring a fresh GPS fix for the street…", "warn");
     if (!reuseFix || !lastLookupFix || Date.now() - lastLookupFix.timestamp > 60000) {
-      const fix = await bestFixSingleTap();
+      const fix = await bestFixSingleTap(25);
       lastLookupFix = fix.position;
     }
     if (request !== locationRequest || identity !== segmentId) return;
@@ -580,7 +571,7 @@ async function autoFillLocation(reuseFix=false) {
       return;
     }
     locationMessage("Finding the street and adjoining boundaries…", "warn");
-    timer = setTimeout(() => controller.abort(), 35000);
+    timer = setTimeout(() => controller.abort(), 60000);
     const response = await fetch("/api/location/suggest", {
       method:"POST", cache:"no-store", signal:controller.signal,
       headers:{"Content-Type":"application/json"},
@@ -629,9 +620,9 @@ async function autoFillLocation(reuseFix=false) {
     }
     const warnings = Array.isArray(result.warnings) ? result.warnings.join(" ") : "";
     const candidates = !result.street && result.candidates?.length ? ` Nearby streets: ${result.candidates.join(", ")}.` : "";
-    locationMessage(`${filled ? `${filled} field${filled === 1 ? "" : "s"} filled. Check the suggestions on site.` : "Existing entries kept. Clear a field to fill it again."} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`,
+    locationMessage(`${filled ? `${filled} field${filled === 1 ? "" : "s"} filled.` : "Existing entries kept. Clear a field to fill it again."} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`,
       warnings || retainedBoundaryMismatch ? "warn" : "good");
-    setStatus("Street lookup complete. Review the metadata before capturing a bay.");
+    setStatus("Ready to capture.");
   } catch (error) {
     if (request === locationRequest) {
       locationMessage(error.name === "AbortError" ? "Street lookup timed out. Enter the details manually or retry." : error.message, "warn");
@@ -657,10 +648,10 @@ $("segment").addEventListener("change", () => {
   }
 });
 
-function bestFixSingleTap() {
+function bestFixSingleTap(accuracyOverride) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("Geolocation is not supported on this device."));
-    const requiredAccuracy = Number($("requiredAccuracy").value);
+    const requiredAccuracy = accuracyOverride ?? Number($("requiredAccuracy").value);
     const startedAt = Date.now();
     let best = null;
     let watchId = null;
