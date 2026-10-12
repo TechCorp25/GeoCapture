@@ -120,15 +120,15 @@
         </label>
       </div>
       <div>
-        <label for="area">Parking area number</label>
+        <label for="area">Parking area number (optional)</label>
         <input id="area" type="text" placeholder="533 or MCC-TA" autocomplete="off">
       </div>
       <div>
-        <label for="easypark">EasyPark / PayStay number</label>
+        <label for="easypark">EasyPark / PayStay number (optional)</label>
         <input id="easypark" inputmode="numeric" placeholder="7391">
       </div>
       <div>
-        <label for="permit">Permit Number</label>
+        <label for="permit">Permit number (optional)</label>
         <input id="permit" type="text" placeholder="MCC-TA" autocomplete="off">
       </div>
       <div class="checkbox-row">
@@ -386,10 +386,8 @@ function validateMeta() {
       ? "Complete the street segment fields before capture."
       : "Complete all numbered-bay segment fields before capture.");
   }
-  const number = paymentNumber();
-  if (![$("area").value.trim(), number, $("permit").value.trim()].some(Boolean)) {
-    throw new Error("Enter at least one parking area number, EasyPark / PayStay number, or permit number. Enable the provider to use a payment number.");
-  }
+  // All identifiers are optional. Still reject malformed active provider numbers.
+  paymentNumber();
 }
 
 function setStatus(msg, cls="") {
@@ -836,7 +834,7 @@ $("downloadBtn").addEventListener("click", () => {
   }
   const name = [
     payload.segment.street.replace(/\s+/g,"_"),
-    (payload.segment.parkingAreaNumber || payload.segment.permitNumber || payload.segment.paymentAreaNumber)
+    (payload.segment.parkingAreaNumber || payload.segment.permitNumber || payload.segment.paymentAreaNumber || "NO-IDENTIFIER")
       .replace(/[^a-zA-Z0-9_-]/g, "_"),
     payload.segment.side || "SIDE"
   ].join("-") + ".json";
