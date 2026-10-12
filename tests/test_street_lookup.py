@@ -31,6 +31,30 @@ class NetworkTests(unittest.TestCase):
     def resolve(self, elements, **kwargs):
         return streets.resolve_network(elements, 0, 0, 5, **kwargs)
 
+    def test_locality_checks_and_missing_map_data(self):
+        area = {"type": "area", "tags": {"name": "Footscray", "admin_level": "10", "postal_code": "3011"}}
+        self.assertEqual(streets.locality_warnings([area], "FOOTSCRAY", "3011"), [])
+        for suburb, postcode in (("YARRAVILLE", "3011"), ("FOOTSCRAY", "3012")):
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.locality_warnings([area], suburb, postcode)
+        self.assertEqual(len(streets.locality_warnings([], "FOOTSCRAY", "3011")), 2)
+        self.assertEqual(streets.validate_locality({"postcode": "0800"}), ("", "0800"))
+        for value in (3011, "301", "30xx", [], True):
+            with self.assertRaises(ValueError):
+                streets.validate_locality({"postcode": value})
+
+    def test_locality_is_checked_before_street_resolution(self):
+        streets._requests.clear()
+        area = {"type": "area", "tags": {"name": "Footscray", "place": "suburb", "postal_code": "3011"}}
+        with patch.dict(os.environ, {"STREET_LOOKUP_ENABLED": "true"}), \
+             patch.object(streets, "road_network", return_value=block() + [area]) as network, \
+             patch.object(streets, "google_reference", return_value=None):
+            payload = {"latitude": 0, "longitude": 0, "accuracy": 5, "suburb": "Footscray", "postcode": "3011"}
+            self.assertEqual(streets.lookup(payload)["between"], ["FIRST ROAD", "LAST ROAD"])
+            network.assert_called_with(0, 0, include_locality=True)
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.lookup({**payload, "postcode": "3012"})
+
     def test_two_connected_cross_streets(self):
         r = self.resolve(block())
         self.assertEqual(r["street"], "TEST STREET")

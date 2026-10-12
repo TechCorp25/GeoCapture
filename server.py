@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from pymongo import MongoClient, ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
-from street_lookup import config as lookup_config, lookup, LookupBusy, LookupUnavailable
+from street_lookup import config as lookup_config, lookup, LookupBusy, LookupUnavailable, validate_locality
 
 PORT = int(os.environ.get("PORT", "8080"))
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -73,6 +73,7 @@ def validate_segment_payload(payload):
     if len(bays) > 2000:
         raise ValueError("A road segment cannot contain more than 2000 capture points.")
 
+    validate_locality(segment)
     street = segment.get("street")
     between = segment.get("between")
     side = segment.get("side")
