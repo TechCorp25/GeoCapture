@@ -42,15 +42,27 @@ test('area or permit alone accepts alphabetic identifiers and leading zeroes', (
   }
 });
 
-test('no identifiers, including whitespace, block capture and export', async () => {
-  const a = app(); a.elements.area.value = '  '; a.elements.permit.value = ' ';
-  assert.throws(a.payload, /at least one/);
-  await a.elements.captureBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
-  await a.elements.copyBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
-  a.elements.downloadBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
+test('numbered and unnumbered segments permit no parking, payment or permit identifiers', () => {
+  for (const unnumbered of [false, true]) {
+    const a = app();
+    if (unnumbered) a.toggle('unnumbered', true);
+    a.elements.area.value = '  ';
+    a.elements.permit.value = ' ';
+    a.elements.easypark.value = '7093'; // Inactive provider draft is not exported.
+    const p = a.payload();
+    for (const field of ['parkingAreaNumber', 'permitNumber', 'paymentProvider', 'paymentAreaNumber', 'easyParkNumber', 'payStayNumber']) {
+      assert.equal(p.segment[field], null);
+    }
+    assert.equal(p.segment.paymentRequired, false);
+    assert.equal(p.segment.numberingMode, unnumbered ? 'unnumbered' : 'numbered');
+    assert.doesNotThrow(() => a.run('validateMeta()'));
+  }
+});
+
+test('street metadata is still required when identifiers are absent', () => {
+  const a = app();
+  a.elements.segment.value = '';
+  assert.throws(a.payload, /segment fields/);
 });
 
 test('payment-only prefixes and provider switching are consistent', () => {
