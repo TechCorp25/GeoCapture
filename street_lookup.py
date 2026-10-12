@@ -129,7 +129,7 @@ def road_network(lat, lon):
             # This is server-to-provider only; the browser API stays POST.
             request = (Request(url + ("&" if "?" in url else "?") + encoded, headers=headers)
                        if index else Request(url, data=encoded.encode(), headers=headers))
-            data = fetch_json(request, timeout=8 if index == 0 and len(endpoints) > 1 else 18)
+            data = fetch_json(request, timeout=8 if index == 0 and len(endpoints) > 1 else 30)
             if data.get("remark") or not isinstance(data.get("elements"), list):
                 raise LookupUnavailable("Incomplete road-network response.")
             return data["elements"]

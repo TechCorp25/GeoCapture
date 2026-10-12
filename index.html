@@ -571,7 +571,7 @@ async function autoFillLocation(reuseFix=false) {
       return;
     }
     locationMessage("Finding the street and adjoining boundaries…", "warn");
-    timer = setTimeout(() => controller.abort(), 45000);
+    timer = setTimeout(() => controller.abort(), 60000);
     const response = await fetch("/api/location/suggest", {
       method:"POST", cache:"no-store", signal:controller.signal,
       headers:{"Content-Type":"application/json"},
