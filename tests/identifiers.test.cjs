@@ -13,11 +13,15 @@ function app(form) {
     }};
   }
   const saved = new Map(form ? [['civicmaps_form', JSON.stringify(form)]] : []);
+  const downloads = [];
+  const copies = [];
   const context = vm.createContext({
-    document: {getElementById: id => elements[id]},
+    document: {getElementById: id => elements[id], createElement: () => ({click() {downloads.push(this.download);}})},
     localStorage: {getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key)},
     crypto: {randomUUID: () => '9fb6b566-0012-4f32-a025-37e283ba2394'},
-    navigator: {}, window: {addEventListener() {}}, setTimeout() {}, clearTimeout() {},
+    navigator: {clipboard: {writeText: async text => copies.push(JSON.parse(text))}},
+    URL: {createObjectURL: () => 'blob:test', revokeObjectURL() {}}, Blob: class {},
+    window: {addEventListener() {}}, setTimeout() {}, clearTimeout() {},
     fetch: async () => ({json: async () => ({mongoConfigured: false})}),
   });
   vm.runInContext(script, context);
@@ -25,7 +29,7 @@ function app(form) {
     elements[id].value = value;
   }
   return {
-    elements, saved,
+    elements, saved, downloads, copies,
     run: code => vm.runInContext(code, context),
     payload: () => JSON.parse(vm.runInContext('JSON.stringify(buildPayload())', context)),
     toggle(id, checked) {elements[id].checked = checked; elements[id].listeners.change();},
@@ -42,7 +46,7 @@ test('area or permit alone accepts alphabetic identifiers and leading zeroes', (
   }
 });
 
-test('numbered and unnumbered segments permit no parking, payment or permit identifiers', () => {
+test('numbered and unnumbered segments permit no parking, payment or permit identifiers', async () => {
   for (const unnumbered of [false, true]) {
     const a = app();
     if (unnumbered) a.toggle('unnumbered', true);
@@ -56,6 +60,12 @@ test('numbered and unnumbered segments permit no parking, payment or permit iden
     assert.equal(p.segment.paymentRequired, false);
     assert.equal(p.segment.numberingMode, unnumbered ? 'unnumbered' : 'numbered');
     assert.doesNotThrow(() => a.run('validateMeta()'));
+    await a.elements.copyBtn.listeners.click();
+    assert.equal(a.elements.status.textContent, 'JSON copied.');
+    assert.equal(a.copies[0].segment.parkingAreaNumber, null);
+    a.elements.downloadBtn.listeners.click();
+    assert.equal(a.downloads[0], 'TALBOT_STREET-NO-IDENTIFIER-NORTH.json');
+    assert.equal(a.elements.status.textContent, 'JSON exported.');
   }
 });
 
