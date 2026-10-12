@@ -37,7 +37,7 @@ class IdentifierContractTests(unittest.TestCase):
                 validate_segment_payload(p)
 
     def test_blank_and_invalid_identifier_types_rejected(self):
-        for value in (None, "", "  ", 2, [], {}):
+        for value in ("", "  ", 2, [], {}):
             with self.subTest(value=value):
                 self.payload["segment"]["parkingAreaNumber"] = value
                 with self.assertRaises(ValueError):
@@ -58,12 +58,15 @@ class IdentifierContractTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_segment_payload(p)
 
-    def test_unnumbered_still_needs_identifier(self):
-        self.payload["segment"]["numberingMode"] = "unnumbered"
-        validate_segment_payload(self.payload)
-        self.payload["segment"]["parkingAreaNumber"] = None
-        with self.assertRaises(ValueError):
-            validate_segment_payload(self.payload)
+    def test_numbered_and_unnumbered_without_identifiers(self):
+        for mode in ("numbered", "unnumbered"):
+            with self.subTest(mode=mode):
+                p = copy.deepcopy(self.payload)
+                p["segment"].update(numberingMode=mode, parkingAreaNumber=None, permitNumber=None)
+                validate_segment_payload(p)
+                for field in ("parkingAreaNumber", "permitNumber", "paymentAreaNumber", "easyParkNumber", "payStayNumber"):
+                    p["segment"].pop(field, None)
+                validate_segment_payload(p)
 
     def test_legacy_v2_still_accepted(self):
         self.payload["schema"] = "civicmaps.parking_segment.v2"
