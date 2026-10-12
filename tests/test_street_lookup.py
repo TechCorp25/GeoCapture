@@ -112,6 +112,32 @@ class NetworkTests(unittest.TestCase):
                 streets.fetch_json("https://example.invalid")
             self.assertNotIn("SECRET", str(caught.exception))
 
+    def test_failed_primary_uses_fallback_and_same_query(self):
+        with patch.dict(os.environ, {"OVERPASS_API_URL": "https://primary.example/api",
+                                     "OVERPASS_FALLBACK_URL": "https://fallback.example/api"}), \
+             patch.object(streets, "fetch_json", side_effect=[streets.LookupUnavailable("HTTP 500"),
+                                                            {"elements": block()}]) as fetch:
+            result = streets.road_network(0, 0)
+        self.assertEqual(result, block())
+        first, second = [call.args[0] for call in fetch.call_args_list]
+        self.assertEqual(first.get_method(), "POST")
+        self.assertEqual(second.get_method(), "GET")
+        self.assertEqual(first.data.decode(), second.full_url.split("?", 1)[1])
+
+    def test_partial_primary_retries_and_exhausted_providers_fail(self):
+        with patch.object(streets, "fetch_json", side_effect=[{"remark": "timeout"}, {"elements": block()}]):
+            self.assertEqual(streets.road_network(0, 0), block())
+        with patch.object(streets, "fetch_json", side_effect=streets.LookupUnavailable("failed")):
+            with self.assertRaisesRegex(streets.LookupUnavailable, "providers unavailable"):
+                streets.road_network(0, 0)
+
+    def test_fallback_can_be_disabled(self):
+        with patch.dict(os.environ, {"OVERPASS_FALLBACK_URL": ""}), \
+             patch.object(streets, "fetch_json", side_effect=streets.LookupUnavailable("failed")) as fetch:
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.road_network(0, 0)
+            self.assertEqual(fetch.call_count, 1)
+
     def test_rate_limit_and_disabled_feature(self):
         streets._requests.clear()
         with patch.dict(os.environ, {"STREET_LOOKUP_ENABLED": "false"}):

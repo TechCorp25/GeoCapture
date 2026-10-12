@@ -112,12 +112,31 @@ def road_network(lat, lon):
     endpoint = os.environ.get("OVERPASS_API_URL", "https://overpass-api.de/api/interpreter")
     if not endpoint.startswith("https://"):
         raise LookupUnavailable("The road-network provider requires an HTTPS endpoint.")
-    data = fetch_json(Request(endpoint, data=urlencode({"data": query}).encode(),
-                              headers={"User-Agent": "GeoCapture/1.0 street lookup",
-                                       "Content-Type": "application/x-www-form-urlencoded"}), timeout=20)
-    if data.get("remark") or not isinstance(data.get("elements"), list):
-        raise LookupUnavailable("The road-network response was incomplete. Please retry or enter details manually.")
-    return data["elements"]
+    # Keep the operator's endpoint first, but do not let a single provider
+    # outage disable capture metadata. Empty fallback explicitly disables it.
+    fallback = os.environ.get(
+        "OVERPASS_FALLBACK_URL", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    ).strip()
+    if fallback and not fallback.startswith("https://"):
+        raise LookupUnavailable("The fallback road provider requires an HTTPS endpoint.")
+    endpoints = list(dict.fromkeys(url for url in (endpoint, fallback) if url))
+    for index, url in enumerate(endpoints):
+        try:
+            headers = {"User-Agent": "GeoCapture/1.0 https://github.com/TechCorp25/GeoCapture",
+                       "Content-Type": "application/x-www-form-urlencoded"}
+            encoded = urlencode({"data": query})
+            # The fallback supports GET; some hosted providers reject POST.
+            # This is server-to-provider only; the browser API stays POST.
+            request = (Request(url + ("&" if "?" in url else "?") + encoded, headers=headers)
+                       if index else Request(url, data=encoded.encode(), headers=headers))
+            data = fetch_json(request, timeout=8 if index == 0 and len(endpoints) > 1 else 18)
+            if data.get("remark") or not isinstance(data.get("elements"), list):
+                raise LookupUnavailable("Incomplete road-network response.")
+            return data["elements"]
+        except LookupUnavailable:
+            logging.warning("Street provider attempt %s failed", index + 1)
+    raise LookupUnavailable("Street providers unavailable. Retry lookup.")
+
 
 
 def google_reference(lat, lon):

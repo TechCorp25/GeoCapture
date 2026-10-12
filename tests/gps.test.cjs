@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync(require('node:path').join(__dirname, '../index.html'), 'utf8');
-const source = html.slice(html.indexOf('function bestFixSingleTap()'), html.indexOf('$("captureBtn").addEventListener("click"'));
-function gps() {
+const source = html.slice(html.indexOf('function bestFixSingleTap('), html.indexOf('$("captureBtn").addEventListener("click"'));
+function gps(accuracyOverride) {
   let now = 100000, success, error, timeout, cleared = false;
   const field = {value: '5'};
   const context = vm.createContext({
@@ -14,7 +14,7 @@ function gps() {
     navigator: {geolocation: {watchPosition(ok, fail) {success = ok; error = fail; return 3;}, clearWatch() {cleared = true;}}},
   });
   vm.runInContext(source, context);
-  return {promise: vm.runInContext('bestFixSingleTap()', context), field,
+  return {promise: vm.runInContext(`bestFixSingleTap(${accuracyOverride ?? ''})`, context), field,
     fix(accuracy, elapsed, timestamp) {now = 100000 + elapsed; success({timestamp: timestamp ?? now, coords: {latitude: -37, longitude: 144, accuracy}});},
     expire() {now = 130000; timeout();}, deny() {error({code: 1});}, cleared: () => cleared};
 }
@@ -35,4 +35,11 @@ test('poor accuracy is rejected at the sampling deadline', async () => {
 test('permission denial rejects even after an acceptable sample', async () => {
   const g = gps(); g.fix(3, 1000); g.deny();
   await assert.rejects(g.promise, /permission was denied/); assert.ok(g.cleared());
+});
+
+test('street lookup accepts a 20 m fix without weakening the bay threshold', async () => {
+  const street = gps(25); street.fix(20, 0); street.fix(20, 4000); street.fix(20, 8000);
+  assert.equal((await street.promise).requiredAccuracy, 25);
+  const bay = gps(); bay.fix(20, 1000); bay.expire();
+  await assert.rejects(bay.promise, /does not meet/);
 });

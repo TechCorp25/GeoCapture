@@ -1,11 +1,11 @@
 # GeoCapture
 
-Mobile parking-bay location capture with a strict, operator-selectable GPS quality gate.
+Internal CivicMAPS engineering tool for parking-bay data capture.
 
 ## Street and boundary auto-fill
 
 After an operator enables lookup, tap **Auto-fill street & between streets** before capturing the first bay. The
-app takes a fresh fix using the existing GPS quality gate, finds the current
+app takes a fresh fix within ±25 m, independently of the stricter bay-capture quality gate, finds the current
 street, and follows its connected road geometry in both directions to suggest
 the adjoining street or `DEAD END`. Review the result against the signs on site.
 The lookup does not record a bay or replace any measured bay coordinates.
@@ -34,6 +34,7 @@ not additional boundary coverage. No Google API key is needed for auto-fill.
 | --- | --- | --- |
 | `STREET_LOOKUP_ENABLED` | `false` | Set `true` after approving coordinate transfer to the configured road provider. Manual entry remains available when disabled. |
 | `OVERPASS_API_URL` | `https://overpass-api.de/api/interpreter` | HTTPS Overpass endpoint, supplied by the operator only. |
+| `OVERPASS_FALLBACK_URL` | `https://maps.mail.ru/osm/tools/overpass/api/interpreter` | Secondary OSM provider after a failed or incomplete primary response. Set empty to disable. |
 | `GOOGLE_MAPS_API_KEY` | unset | Optional server-only Geocoding API key; enables the Google street reference. |
 
 For Google, enable the Geocoding API in a billing-enabled Google Cloud project,
@@ -48,12 +49,14 @@ The operator approved OpenStreetMap lookup and production activation on 8 Octobe
 `STREET_LOOKUP_ENABLED=true`. Automated tests use synthetic road networks and
 provider responses. Google is optional and requires its own configured key.
 
-Lookups send the requested coordinate to the configured road provider and, only
+Lookups send the requested coordinate to the primary road provider, then the fallback only on failure and, only
 when its key is configured, Google. There is no background location watching,
 peer sharing, or continuous upload. The GPS watcher closes when sampling finishes.
 The lookup endpoint uses POST so coordinates are absent from request URLs, returns
 `Cache-Control: no-store`, and is excluded from the service-worker cache. No lookup
-coordinates or raw provider responses are saved by the backend. Upstream providers
+coordinates or raw provider responses are saved by the backend. The fallback uses
+HTTPS GET upstream, so its provider receives the query in the URL; application logs
+do not include that URL. The default fallback is the VK Maps global OSM instance. Upstream providers
 have their own request-handling policies.
 
 OSM attribution is displayed in the form and retained in the optional additive
