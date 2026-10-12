@@ -84,14 +84,12 @@ def validate_segment_payload(payload):
     if side not in {"NORTH", "SOUTH", "EAST", "WEST"}:
         raise ValueError("segment.side is invalid.")
 
-    # v2 clients remain readable/writable; v3 enforces the new identifier contract.
+    # v2 clients remain readable/writable; v3 validates optional identifiers and provider consistency.
     if payload.get("schema") == "civicmaps.parking_segment.v3":
         for field in ("parkingAreaNumber", "permitNumber", "paymentAreaNumber", "easyParkNumber", "payStayNumber"):
             value = segment.get(field)
             if value is not None and (not isinstance(value, str) or not value.strip()):
                 raise ValueError(f"segment.{field} must be a non-empty string or null.")
-        if not any(segment.get(field) for field in ("parkingAreaNumber", "paymentAreaNumber", "permitNumber")):
-            raise ValueError("At least one parking area, payment area, or permit number is required.")
         provider = segment.get("paymentProvider")
         if provider is not None and provider not in ("EasyPark", "PayStay"):
             raise ValueError("segment.paymentProvider must be EasyPark, PayStay, or null.")

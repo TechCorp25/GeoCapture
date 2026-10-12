@@ -106,23 +106,26 @@ The reported accuracy, number of fresh samples, sampling duration, and required 
 
 ## Parking identifiers
 
-Enter at least one of **Parking area number**, **EasyPark / PayStay number**, or
-**Permit Number**. Parking area and permit identifiers accept text (including
-letters, digits and hyphens), preserve leading zeroes, and are trimmed at export.
-This rule applies to numbered and unnumbered parking. Street metadata and, for
-numbered parking, the starting bay remain required.
+**Parking area number**, **EasyPark / PayStay number**, and **Permit Number** are
+all optional for numbered and unnumbered parking. For timed-only or unrestricted
+parking without identifiers, leave all three blank rather than entering a
+fabricated value. When provided, parking area and permit numbers accept text
+(including letters, digits and hyphens), preserve leading zeroes, and are
+trimmed at export. Street metadata and, for numbered bays, the starting bay
+remain required.
 
 The EasyPark and PayStay switches are mutually exclusive. Both may be off for
 areas without either provider. An inactive payment input is retained as a local
 draft but is not exported or counted as an identifier. Select a provider to edit
-and include its number. An empty payment input is optional if another identifier
-is present. Active payment numbers must be numeric; an existing EP-/PS- prefix
+and include its number. An empty payment input is optional and does not activate payment.
+Active payment numbers must be numeric; an existing EP-/PS- prefix
 is accepted and replaced with the selected provider's prefix exactly once.
 
 Examples:
 
 | Input | JSON |
 | --- | --- |
+| All identifiers blank, both providers off | All identifiers `null`, `paymentRequired: false` |
 | Parking area `MCC-TA`, both providers off | `parkingAreaNumber: "MCC-TA"` |
 | Permit `MCC-TA01`, both providers off | `permitNumber: "MCC-TA01"` |
 | EasyPark selected, number `7093` | `paymentAreaNumber: "EP-7093"`, `easyParkNumber: "EP-7093"` |
@@ -142,7 +145,8 @@ records and bay coordinates are not migrated. On restoring a legacy form with
 an unprefixed payment number, the user must select its provider or explicitly
 confirm neither provider before capture, save or export. No provider is guessed
 from the old shared `easyParkNumber` field. The local form and points are retained.
-Unnumbered legacy segments without identifiers need one entered before saving.
+New numbered and unnumbered segments do not require any identifiers. JSON export
+uses `NO-IDENTIFIER` in the filename when all identifiers are absent.
 
 For Talbot Street, enter `MCC-TA` as the parking area number and leave both
 providers off; the previous placeholder `02` is not needed. Existing recorded

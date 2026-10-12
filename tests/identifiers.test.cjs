@@ -13,11 +13,15 @@ function app(form) {
     }};
   }
   const saved = new Map(form ? [['civicmaps_form', JSON.stringify(form)]] : []);
+  const downloads = [];
+  const copies = [];
   const context = vm.createContext({
-    document: {getElementById: id => elements[id]},
+    document: {getElementById: id => elements[id], createElement: () => ({click() {downloads.push(this.download);}})},
     localStorage: {getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key)},
     crypto: {randomUUID: () => '9fb6b566-0012-4f32-a025-37e283ba2394'},
-    navigator: {}, window: {addEventListener() {}}, setTimeout() {}, clearTimeout() {},
+    navigator: {clipboard: {writeText: async text => copies.push(JSON.parse(text))}},
+    URL: {createObjectURL: () => 'blob:test', revokeObjectURL() {}}, Blob: class {},
+    window: {addEventListener() {}}, setTimeout() {}, clearTimeout() {},
     fetch: async () => ({json: async () => ({mongoConfigured: false})}),
   });
   vm.runInContext(script, context);
@@ -25,7 +29,7 @@ function app(form) {
     elements[id].value = value;
   }
   return {
-    elements, saved,
+    elements, saved, downloads, copies,
     run: code => vm.runInContext(code, context),
     payload: () => JSON.parse(vm.runInContext('JSON.stringify(buildPayload())', context)),
     toggle(id, checked) {elements[id].checked = checked; elements[id].listeners.change();},
@@ -42,15 +46,33 @@ test('area or permit alone accepts alphabetic identifiers and leading zeroes', (
   }
 });
 
-test('no identifiers, including whitespace, block capture and export', async () => {
-  const a = app(); a.elements.area.value = '  '; a.elements.permit.value = ' ';
-  assert.throws(a.payload, /at least one/);
-  await a.elements.captureBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
-  await a.elements.copyBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
-  a.elements.downloadBtn.listeners.click();
-  assert.match(a.elements.status.textContent, /at least one/);
+test('numbered and unnumbered segments permit no parking, payment or permit identifiers', async () => {
+  for (const unnumbered of [false, true]) {
+    const a = app();
+    if (unnumbered) a.toggle('unnumbered', true);
+    a.elements.area.value = '  ';
+    a.elements.permit.value = ' ';
+    a.elements.easypark.value = '7093'; // Inactive provider draft is not exported.
+    const p = a.payload();
+    for (const field of ['parkingAreaNumber', 'permitNumber', 'paymentProvider', 'paymentAreaNumber', 'easyParkNumber', 'payStayNumber']) {
+      assert.equal(p.segment[field], null);
+    }
+    assert.equal(p.segment.paymentRequired, false);
+    assert.equal(p.segment.numberingMode, unnumbered ? 'unnumbered' : 'numbered');
+    assert.doesNotThrow(() => a.run('validateMeta()'));
+    await a.elements.copyBtn.listeners.click();
+    assert.equal(a.elements.status.textContent, 'JSON copied.');
+    assert.equal(a.copies[0].segment.parkingAreaNumber, null);
+    a.elements.downloadBtn.listeners.click();
+    assert.equal(a.downloads[0], 'TALBOT_STREET-NO-IDENTIFIER-NORTH.json');
+    assert.equal(a.elements.status.textContent, 'JSON exported.');
+  }
+});
+
+test('street metadata is still required when identifiers are absent', () => {
+  const a = app();
+  a.elements.segment.value = '';
+  assert.throws(a.payload, /segment fields/);
 });
 
 test('payment-only prefixes and provider switching are consistent', () => {
