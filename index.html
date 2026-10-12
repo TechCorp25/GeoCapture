@@ -80,6 +80,14 @@
 
   <section class="card">
     <div class="grid">
+      <div>
+        <label for="suburb">Suburb</label>
+        <input id="suburb" placeholder="FOOTSCRAY" maxlength="100" autocomplete="off">
+      </div>
+      <div>
+        <label for="postcode">Postcode</label>
+        <input id="postcode" placeholder="3011" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off">
+      </div>
       <div class="full">
         <button id="locateStreetBtn" class="secondary">📍 Auto-fill street &amp; between streets</button>
         <div id="locationStatus" class="status" role="status" aria-live="polite"></div>
@@ -195,7 +203,7 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const fields = ["segment","betweenA","betweenB","side","area","easypark","permit","startBay","direction","requiredAccuracy"];
+const fields = ["suburb","postcode","segment","betweenA","betweenB","side","area","easypark","permit","startBay","direction","requiredAccuracy"];
 const POINTS_KEY = "civicmaps_points";
 const FORM_KEY = "civicmaps_form";
 const SEGMENT_ID_KEY = "civicmaps_segment_id";
@@ -271,7 +279,7 @@ function restoreForm() {
 
 fields.forEach(id => {
   $(id).addEventListener("input", () => {
-    if (["segment", "betweenA", "betweenB"].includes(id)) locationFieldEdited(id);
+    if (["suburb", "postcode", "segment", "betweenA", "betweenB"].includes(id)) locationFieldEdited(id);
     updateModeUI();
     saveForm();
     scheduleMetadataPersist();
@@ -358,7 +366,15 @@ function updateModeUI() {
   $("unnumbered").disabled = points.length > 0;
 }
 
+function validateLocality() {
+  if ($("suburb").value.trim().length > 100) throw new Error("Suburb must be at most 100 characters.");
+  if ($("postcode").value.trim() && !/^[0-9]{4}$/.test($("postcode").value.trim())) {
+    throw new Error("Enter a four-digit postcode.");
+  }
+}
+
 function validateMeta() {
+  validateLocality();
   if (legacyPaymentNeedsReview) {
     throw new Error("Select the provider for the saved payment number, or confirm neither payment provider.");
   }
@@ -410,6 +426,8 @@ function buildPayload(savedReason="manual", storageState="active") {
     revision,
     segment: {
       street: $("segment").value.trim().toUpperCase(),
+      suburb: $("suburb").value.trim().toUpperCase() || null,
+      postcode: $("postcode").value.trim() || null,
       ...(locationAttribution ? {locationAttribution} : {}),
       between: [
         $("betweenA").value.trim().toUpperCase(),
@@ -508,16 +526,16 @@ function locationMessage(message, cls="") {
 function locationFieldEdited(id) {
   locationEditVersion += 1;
   delete autoLocationFields[id];
-  if (id === "segment") {
+  if (["segment", "suburb", "postcode"].includes(id) && !points.length) {
     // Boundaries suggested for the previous street are no longer applicable.
-    for (const boundary of ["betweenA", "betweenB"]) {
+    for (const boundary of (id === "segment" ? ["betweenA", "betweenB"] : ["segment", "betweenA", "betweenB"])) {
       if (autoLocationFields[boundary] && $(boundary).value === autoLocationFields[boundary]) {
         $(boundary).value = "";
       }
       delete autoLocationFields[boundary];
     }
     $("googleReference").hidden = true;
-    locationMessage("Street edited.");
+    locationMessage(id === "segment" ? "Street edited." : "Locality edited. Tap auto-fill to update streets.");
   }
 }
 
@@ -548,7 +566,7 @@ async function autoFillLocation(reuseFix=false) {
   const request = ++locationRequest;
   const identity = segmentId;
   const editVersion = locationEditVersion;
-  const initial = Object.fromEntries(["segment", "betweenA", "betweenB"].map(id => [id, $(id).value]));
+  const initial = Object.fromEntries(["suburb", "postcode", "segment", "betweenA", "betweenB"].map(id => [id, $(id).value]));
   locationBusy = true;
   $("locateStreetBtn").disabled = true;
   $("captureBtn").disabled = true;
@@ -556,6 +574,7 @@ async function autoFillLocation(reuseFix=false) {
   $("googleReference").hidden = true;
   let timer;
   try {
+    validateLocality();
     locationController = new AbortController();
     const controller = locationController;
     const settings = await getLocationSettings();
@@ -576,7 +595,8 @@ async function autoFillLocation(reuseFix=false) {
       method:"POST", cache:"no-store", signal:controller.signal,
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({latitude:lastLookupFix.coords.latitude, longitude:lastLookupFix.coords.longitude,
-        accuracy:lastLookupFix.coords.accuracy, street:initial.segment.trim()})
+        accuracy:lastLookupFix.coords.accuracy, street:initial.segment.trim(),
+        suburb:initial.suburb.trim(), postcode:initial.postcode.trim()})
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Street lookup failed. Enter the details manually.");

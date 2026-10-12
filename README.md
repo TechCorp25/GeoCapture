@@ -165,3 +165,19 @@ python -m unittest discover -s tests -v
 
 The service-worker shell cache is versioned for this update. The updated worker activates automatically; reload the app after deployment to load the new interface. Local capture data
 is retained across this update.
+
+
+### Suburb and postcode
+
+Optional editable suburb and four-digit Australian postcode fields are saved in
+local form state, JSON exports and MongoDB as `segment.suburb` and
+`segment.postcode` (strings or null). Older records may omit both fields.
+They are retained when starting the next segment to reduce repeated entry.
+
+Auto-fill checks these hints against OpenStreetMap areas enclosing the fresh GPS
+fix before resolving the on-street road and its connected boundaries. A known
+locality mismatch stops auto-fill. If the map lacks a locality value, lookup
+continues using GPS with a concise warning. Hints do not substitute for GPS or
+select a block within a suburb. Manual entries remain editable and are preserved;
+changing locality clears only untouched automatic street/boundary suggestions
+before capture and discards any pending lookup response.

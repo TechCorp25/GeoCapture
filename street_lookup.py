@@ -55,7 +55,39 @@ def validate_request(payload):
     street = payload.get("street", "")
     if not isinstance(street, str) or len(street) > 150:
         raise ValueError("street must be text of at most 150 characters.")
+    validate_locality(payload)
     return (*values, street.strip())
+
+
+def validate_locality(payload):
+    suburb = payload.get("suburb")
+    postcode = payload.get("postcode")
+    if suburb is not None and (not isinstance(suburb, str) or len(suburb) > 100):
+        raise ValueError("Suburb must be text of at most 100 characters.")
+    if postcode is not None and (not isinstance(postcode, str) or
+                                 (postcode.strip() and not re.fullmatch(r"[0-9]{4}", postcode.strip()))):
+        raise ValueError("Enter a four-digit postcode.")
+    return (suburb or "").strip().upper(), (postcode or "").strip()
+
+
+def locality_warnings(elements, suburb, postcode):
+    # Only enclosing areas describe the GPS fix. Nearby road address tags can
+    # belong to another suburb, so they must not validate the capture locality.
+    areas = [e.get("tags", {}) for e in elements if e.get("type") == "area"]
+    suburbs, postcodes = set(), set()
+    for tags in areas:
+        if tags.get("place") in {"suburb", "town", "village", "locality", "neighbourhood"} or tags.get("admin_level") == "10":
+            for key in ("name", "official_name", "alt_name", "short_name"):
+                suburbs.update(v.strip().upper() for v in tags.get(key, "").split(";") if v.strip())
+        for key in ("postal_code", "addr:postcode"):
+            postcodes.update(v.strip() for v in tags.get(key, "").split(";") if v.strip())
+    warnings = []
+    for label, value, known in (("Suburb", suburb, suburbs), ("Postcode", postcode, postcodes)):
+        if value and known and value not in known:
+            raise LookupUnavailable(f"{label} does not match the GPS locality. Check the field or your location and retry.")
+        if value and not known:
+            warnings.append(f"{label} unavailable in map data; streets use GPS only.")
+    return warnings
 
 
 def normalise(name):
@@ -99,7 +131,7 @@ def fetch_json(request, timeout=15):
         raise LookupUnavailable("Location provider is unavailable. Enter the street details manually or retry.") from None
 
 
-def road_network(lat, lon):
+def road_network(lat, lon, include_locality=False):
     # All ways touching seed nodes are included, preventing artificial dead ends
     # at OSM way splits. Names never enter this query (no query injection).
     road_filter = '[highway~"^(' + "|".join(sorted(ROAD_TYPES)) + ')$"]'
@@ -109,6 +141,8 @@ def road_network(lat, lon):
     query = (f"[out:json][timeout:15][maxsize:67108864];way{neighbourhood}{road_filter}->.roads;"
              f"node(w.roads){neighbourhood}->.nodes;way(bn.nodes){road_filter}->.connected;"
              "(.roads;.connected;);out body;>;out skel qt;")
+    if include_locality:
+        query += f"is_in({lat:.7f},{lon:.7f});out tags;"
     endpoint = os.environ.get("OVERPASS_API_URL", "https://overpass-api.de/api/interpreter")
     if not endpoint.startswith("https://"):
         raise LookupUnavailable("The road-network provider requires an HTTPS endpoint.")
@@ -267,7 +301,11 @@ def lookup(payload):
             if len(_requests) >= 1000 or sum(t > now - 60 for t in _requests) >= 30:
                 raise LookupBusy("Street lookup limit reached. Enter details manually or retry later.")
             _requests.append(now)
-        result = resolve_network(road_network(lat, lon), lat, lon, accuracy, street)
+        suburb, postcode = validate_locality(payload)
+        elements = road_network(lat, lon, include_locality=bool(suburb or postcode))
+        warnings = locality_warnings(elements, suburb, postcode)
+        result = resolve_network(elements, lat, lon, accuracy, street)
+        result["warnings"].extend(warnings)
         # Google's result is display-only and never feeds the saved OSM labels.
         try:
             result["googleReference"] = google_reference(lat, lon)

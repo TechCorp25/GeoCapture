@@ -17,15 +17,17 @@ function app() {
   const saved = new Map();
   let answer = async () => suggestion;
   let requested = 0;
+  let requestBody;
   const context = vm.createContext({
     document:{getElementById:id => elements[id]},
     localStorage:{getItem:key => saved.get(key) ?? null, setItem:(key,val) => saved.set(key,val), removeItem:key => saved.delete(key)},
     crypto:{randomUUID:() => '9fb6b566-0012-4f32-a025-37e283ba2394'},
     navigator:{onLine:true}, window:{addEventListener() {}},
     setTimeout, clearTimeout, AbortController,
-    fetch:async url => {
+    fetch:async (url, options) => {
       if (url === '/api/location/suggest') {
         requested++;
+        requestBody = JSON.parse(options.body);
         return {ok:true, json:answer};
       }
       return {ok:true, json:async () => ({enabled:true, mongoConfigured:false})};
@@ -34,7 +36,7 @@ function app() {
   vm.runInContext(script, context);
   const run = code => vm.runInContext(code, context);
   run('bestFixSingleTap = async () => ({position:{timestamp:Date.now(),coords:{latitude:-37.8,longitude:144.9,accuracy:4}}})');
-  return {elements, saved, run, requested:() => requested,
+  return {elements, saved, run, requestBody:() => requestBody, requested:() => requested,
     answer(fn) {answer = fn;},
     async fire(id, event) {for (const fn of elements[id].listeners[event] || []) await fn();},
     lookup:() => run('autoFillLocation()'),
@@ -138,4 +140,36 @@ test('active segments and ambiguous lookups do not acquire metadata accidentally
   assert.equal(a.elements.segment.value, '');
   assert.equal(a.elements.betweenB.value, '');
   assert.match(a.elements.locationStatus.textContent, /Nearby streets/);
+});
+
+
+test('locality persists, is sent to lookup, exports as text and invalidates automatic streets', async () => {
+  const a = app();
+  await a.input('suburb', 'Footscray'); await a.input('postcode', '3011');
+  await a.lookup();
+  assert.equal(a.requestBody().suburb, 'Footscray');
+  assert.equal(a.requestBody().postcode, '3011');
+  a.elements.side.value = 'SOUTH'; a.elements.area.value = 'TA'; a.elements.startBay.value = '1';
+  const payload = JSON.parse(a.run('JSON.stringify(buildPayload())'));
+  assert.equal(payload.segment.suburb, 'FOOTSCRAY');
+  assert.equal(payload.segment.postcode, '3011');
+  await a.input('betweenB', 'MANUAL ROAD');
+  await a.input('postcode', '3012');
+  assert.equal(a.elements.segment.value, '');
+  assert.equal(a.elements.betweenA.value, '');
+  assert.equal(a.elements.betweenB.value, 'MANUAL ROAD');
+  a.elements.postcode.value = ''; a.run('restoreForm()');
+  assert.equal(a.elements.postcode.value, '3012');
+});
+
+test('locality edits discard pending lookup and malformed postcode prevents request', async () => {
+  const a = app(); let resolve, started;
+  const pending = new Promise(r => started = r);
+  a.answer(() => {started(); return new Promise(r => resolve = r);});
+  const lookup = a.lookup(); await pending;
+  await a.input('suburb', 'Yarraville'); resolve(suggestion); await lookup;
+  assert.equal(a.elements.segment.value, '');
+  await a.input('postcode', '301'); await a.lookup();
+  assert.equal(a.requested(), 1);
+  assert.match(a.elements.locationStatus.textContent, /four-digit/);
 });
