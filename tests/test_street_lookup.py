@@ -28,6 +28,11 @@ def block():
 
 
 class NetworkTests(unittest.TestCase):
+    def setUp(self):
+        # Cache and endpoint cooldown must never contaminate independent fixtures.
+        streets._network_cache.clear()
+        streets._provider_backoff.clear()
+
     def resolve(self, elements, **kwargs):
         return streets.resolve_network(elements, 0, 0, 5, **kwargs)
 
@@ -117,6 +122,30 @@ class NetworkTests(unittest.TestCase):
                            ("street", []), ("street", "A" * 151)):
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):
                 streets.validate_request({**good, key: value})
+
+    def test_cached_nearby_geometry_is_re_resolved_for_each_position(self):
+        with patch.object(streets, "fetch_json", return_value={"elements": block()}) as provider:
+            self.assertEqual(streets.road_network(0, 0), block())
+            cached = streets.road_network(0, 0.00005)
+            self.assertEqual(cached, block())
+            self.assertEqual(provider.call_count, 1)
+            # A distant capture is outside the cache footprint.
+            streets.road_network(0, 0.001)
+            self.assertEqual(provider.call_count, 2)
+
+    def test_failed_primary_is_temporarily_skipped_without_disabling_fallback(self):
+        with patch.dict(os.environ, {"OVERPASS_API_URL": "https://primary.example/api",
+                                     "OVERPASS_FALLBACK_URL": "https://fallback.example/api"}), \
+             patch.object(streets, "fetch_json", side_effect=[
+                 streets.LookupUnavailable("primary down"),
+                 {"elements": block()},
+                 {"elements": block()},
+             ]) as provider:
+            streets.road_network(0, 0)
+            streets.road_network(0, 0.002)
+            requests = [call.args[0] for call in provider.call_args_list]
+            self.assertEqual(len(requests), 3)
+            self.assertEqual(requests[2].get_method(), "GET")
 
     def test_google_reference_never_changes_osm_suggestions(self):
         streets._requests.clear()
