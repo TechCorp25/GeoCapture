@@ -24,6 +24,14 @@ ATTRIBUTION = {"source": "OpenStreetMap", "attribution": "© OpenStreetMap contr
 _slots = threading.BoundedSemaphore(2)
 _limit_lock = threading.Lock()
 _requests = deque()
+# Short-lived process-local OSM geometry cache. No raw network data or GPS
+# positions are persisted to disk or MongoDB by this metadata service.
+_network_cache = deque(maxlen=8)
+_network_cache_lock = threading.Lock()
+_provider_backoff = {}
+_provider_backoff_lock = threading.Lock()
+CACHE_TTL_SECONDS = 600
+PROVIDER_BACKOFF_SECONDS = 120
 
 
 class LookupUnavailable(Exception):
@@ -132,6 +140,17 @@ def fetch_json(request, timeout=15):
 
 
 def road_network(lat, lon, include_locality=False):
+    # Re-resolve cached road geometry against EACH new GPS coordinate. Never
+    # cache a street label or boundary result that might become stale.
+    now = time.monotonic()
+    with _network_cache_lock:
+        while _network_cache and now - _network_cache[0][0] > CACHE_TTL_SECONDS:
+            _network_cache.popleft()
+        for stamp, centre_lat, centre_lon, area, elements in reversed(_network_cache):
+            metres = math.hypot((lat - centre_lat) * 111320,
+                                (lon - centre_lon) * 111320 * math.cos(math.radians(lat)))
+            if area == include_locality and metres <= (15 if include_locality else 40):
+                return elements
     # All ways touching seed nodes are included, preventing artificial dead ends
     # at OSM way splits. Names never enter this query (no query injection).
     road_filter = '[highway~"^(' + "|".join(sorted(ROAD_TYPES)) + ')$"]'
@@ -155,6 +174,9 @@ def road_network(lat, lon, include_locality=False):
         raise LookupUnavailable("The fallback road provider requires an HTTPS endpoint.")
     endpoints = list(dict.fromkeys(url for url in (endpoint, fallback) if url))
     for index, url in enumerate(endpoints):
+        with _provider_backoff_lock:
+            if _provider_backoff.get(url, 0) > time.monotonic():
+                continue
         try:
             headers = {"User-Agent": "GeoCapture/1.0 https://github.com/TechCorp25/GeoCapture",
                        "Content-Type": "application/x-www-form-urlencoded"}
@@ -163,11 +185,20 @@ def road_network(lat, lon, include_locality=False):
             # This is server-to-provider only; the browser API stays POST.
             request = (Request(url + ("&" if "?" in url else "?") + encoded, headers=headers)
                        if index else Request(url, data=encoded.encode(), headers=headers))
-            data = fetch_json(request, timeout=8 if index == 0 and len(endpoints) > 1 else 30)
+            data = fetch_json(request, timeout=4 if index == 0 and len(endpoints) > 1 else 25)
             if data.get("remark") or not isinstance(data.get("elements"), list):
                 raise LookupUnavailable("Incomplete road-network response.")
-            return data["elements"]
+            elements = data["elements"]
+            with _provider_backoff_lock:
+                _provider_backoff.pop(url, None)
+            with _network_cache_lock:
+                _network_cache.append((time.monotonic(), lat, lon, include_locality, elements))
+            return elements
         except LookupUnavailable:
+            # Do not spend several more seconds re-trying an unhealthy primary
+            # provider for every subsequent operator lookup.
+            with _provider_backoff_lock:
+                _provider_backoff[url] = time.monotonic() + PROVIDER_BACKOFF_SECONDS
             logging.warning("Street provider attempt %s failed", index + 1)
     raise LookupUnavailable("Street providers unavailable. Retry lookup.")
 

@@ -224,10 +224,15 @@ let locationController = null;
 let locationBusy = false;
 let locationEditVersion = 0;
 let locationSettings = null;
+let pendingSave = null;
+let syncRetryTimer = null;
 
-const GPS_SAMPLE_MS = 30000;
-const GPS_MIN_SAMPLE_MS = 8000;
-const GPS_MIN_FIXES = 3;
+// Maintain the operator's requested accuracy; only shorten the wait once
+// a fresh qualifying receiver fix has actually arrived.
+const GPS_SAMPLE_MS = 16000;
+const GPS_MIN_SAMPLE_MS = 1500;
+const GPS_SINGLE_FIX_SETTLE_MS = 2700;
+const GPS_MIN_FIXES = 2;
 const GPS_FRESHNESS_TOLERANCE_MS = 2000;
 
 function createSegmentId() {
@@ -454,42 +459,85 @@ function buildPayload(savedReason="manual", storageState="active") {
   };
 }
 
-async function persistSegment(reason="autosave", storageState="active", bump=false) {
-  if (!points.length) return true;
+// One durable latest-revision snapshot per active segment. In-flight requests
+// hold their own immutable payload; later bay captures replace the queued
+// snapshot, not the request currently being sent.
+function scheduleSyncRetry() {
+  clearTimeout(syncRetryTimer);
+  if (navigator.onLine === false || !localStorage.getItem(PENDING_KEY)) return;
+  syncRetryTimer = setTimeout(() => { void flushSegmentQueue(); }, 5000);
+}
+
+async function flushSegmentQueue() {
+  if (pendingSave) return pendingSave;
+  pendingSave = (async () => {
+    while (localStorage.getItem(PENDING_KEY)) {
+      const snapshot = localStorage.getItem(PENDING_KEY);
+      let payload;
+      try {
+        payload = JSON.parse(snapshot);
+      } catch {
+        setStorageStatus("Storage: invalid pending local snapshot. Export JSON and investigate.", "bad");
+        return false;
+      }
+      try {
+        // An interrupted network request must not starve all newer revisions.
+        // Retry is safe because segment IDs and revisions are idempotent.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        let response;
+        try {
+          response = await fetch("/api/segments", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            signal: controller.signal,
+            body: snapshot
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `Save failed (${response.status}).`);
+        // Do not erase a newer revision written while this request was running.
+        if (localStorage.getItem(PENDING_KEY) === snapshot) {
+          localStorage.removeItem(PENDING_KEY);
+          setStorageStatus(
+            `Storage: synced to MongoDB · revision ${result.revision} · ${result.pointCount} points`,
+            "good"
+          );
+        } else {
+          setStorageStatus("Storage: syncing newer local captures…", "warn");
+        }
+      } catch (error) {
+        setStorageStatus(`Storage: local copy queued — ${error.message}`, "warn");
+        scheduleSyncRetry();
+        return false;
+      }
+    }
+    clearTimeout(syncRetryTimer);
+    return true;
+  })();
+  try {
+    return await pendingSave;
+  } finally {
+    pendingSave = null;
+  }
+}
+
+function persistSegment(reason="autosave", storageState="active", bump=false) {
+  if (!points.length && revision === 0 && storageState === "active") return Promise.resolve(true);
   try {
     validateMeta();
-  } catch (e) {
-    setStorageStatus(`Local only — ${e.message}`, "warn");
-    return false;
-  }
-
-  if (bump || revision < 1) bumpRevision();
-
-  const payload = buildPayload(reason, storageState);
-  localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
-  setStorageStatus("Storage: saving road segment…", "warn");
-
-  try {
-    const response = await fetch("/api/segments", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(result.error || `Save failed (${response.status}).`);
-    }
-
-    localStorage.removeItem(PENDING_KEY);
-    setStorageStatus(
-      `Storage: saved to MongoDB · revision ${result.revision} · ${result.pointCount} point${result.pointCount === 1 ? "" : "s"}`,
-      "good"
-    );
-    return true;
-  } catch (e) {
-    setStorageStatus(`Storage: local copy retained — ${e.message}`, "bad");
-    return false;
+    if (bump || revision < 1) bumpRevision();
+    const payload = buildPayload(reason, storageState);
+    // localStorage is written synchronously before any network operation.
+    localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
+    setStorageStatus("Storage: captured locally · MongoDB sync queued", "warn");
+    if (navigator.onLine === false) return Promise.resolve(false);
+    return flushSegmentQueue();
+  } catch (error) {
+    setStorageStatus(`Storage: local save failed — ${error.message}`, "bad");
+    return Promise.resolve(false);
   }
 }
 
@@ -676,10 +724,13 @@ function bestFixSingleTap(accuracyOverride) {
     let done = false;
     let freshFixCount = 0;
     let timerId = null;
+    let settleTimerId = null;
     let statusTimerId = null;
+    let lastFixTimestamp = null;
 
     const cleanUp = () => {
       clearTimeout(timerId);
+      clearTimeout(settleTimerId);
       clearInterval(statusTimerId);
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     };
@@ -706,13 +757,20 @@ function bestFixSingleTap(accuracyOverride) {
         // Some browsers may still deliver an old cached fix first. Never use it.
         if (!Number.isFinite(pos.timestamp) || pos.timestamp < startedAt - GPS_FRESHNESS_TOLERANCE_MS) return;
         if (![c.latitude, c.longitude, c.accuracy].every(Number.isFinite) || c.accuracy <= 0) return;
+        if (pos.timestamp === lastFixTimestamp) return;
+        lastFixTimestamp = pos.timestamp;
         freshFixCount += 1;
         if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
         const elapsed = Date.now() - startedAt;
         setStatus(`Acquiring GPS… ${freshFixCount} fresh fixes; best ±${best.coords.accuracy.toFixed(1)} m (need ±${requiredAccuracy} m)`, best.coords.accuracy <= requiredAccuracy ? "good" : "warn");
-        // Do not accept the first optimistic reading: give the receiver time to
-        // converge and require multiple live updates before ending early.
-        if (elapsed >= GPS_MIN_SAMPLE_MS && freshFixCount >= GPS_MIN_FIXES && best.coords.accuracy <= requiredAccuracy) finish();
+        if (best.coords.accuracy <= requiredAccuracy) {
+          // Browsers sometimes emit only one live fix. Settle a qualifying
+          // single fix briefly instead of making the operator wait 16 seconds.
+          if (settleTimerId === null) {
+            settleTimerId = setTimeout(() => finish(), Math.max(0, GPS_SINGLE_FIX_SETTLE_MS - elapsed));
+          }
+          if (elapsed >= GPS_MIN_SAMPLE_MS && freshFixCount >= GPS_MIN_FIXES) finish();
+        }
       },
       err => {
         if (done) return;
@@ -782,7 +840,8 @@ $("captureBtn").addEventListener("click", async () => {
 
     const cls = c.accuracy <= 5 ? "good" : (c.accuracy <= 10 ? "warn" : "bad");
     setStatus(`${unnumbered ? `Unnumbered bay ${captureSequence}` : `Bay ${bay}`} captured locally. Reported accuracy ±${c.accuracy.toFixed(1)} m.`, cls);
-    await persistSegment("capture", "active", true);
+    // MongoDB runs behind capture; do not block the next GPS acquisition.
+    void persistSegment("capture", "active", true);
   } catch (e) {
     setStatus(e.message, "bad");
   } finally {
@@ -797,15 +856,10 @@ $("undoBtn").addEventListener("click", async () => {
   points.pop();
   render();
 
-  if (points.length) {
-    setStatus("Last capture removed locally. Updating stored segment…", "warn");
-    const saved = await persistSegment("undo", "active", true);
-    setStatus(saved ? "Last capture removed and stored segment updated." : "Last capture removed locally; database update is pending.", saved ? "good" : "warn");
-  } else {
-    bumpRevision();
-    setStatus("Last local capture removed. The previous server copy is preserved; use Finish & clear to begin a new segment.", "warn");
-    setStorageStatus("Storage: server copy preserved to prevent accidental data loss.", "warn");
-  }
+  // A zero-bay revision is also synchronised; a stale server copy must not
+  // silently retain a bay the operator explicitly removed.
+  setStatus("Last capture removed locally; database sync queued.", "warn");
+  void persistSegment("undo", "active", true);
 });
 
 $("copyBtn").addEventListener("click", async () => {
@@ -887,7 +941,8 @@ $("clearBtn").addEventListener("click", async () => {
 });
 
 window.addEventListener("online", () => {
-  if (points.length) persistSegment("online_retry", "active", false);
+  if (localStorage.getItem(PENDING_KEY)) void flushSegmentQueue();
+  else if (points.length) void persistSegment("online_retry", "active", false);
 });
 
 restoreForm();
@@ -895,8 +950,11 @@ render();
 checkStorageHealth();
 getLocationSettings().catch(() => {});
 
-if (points.length) {
-  setTimeout(() => persistSegment("startup_retry", "active", revision < 1), 500);
+if (localStorage.getItem(PENDING_KEY)) {
+  setStorageStatus("Storage: unsynced local capture found; retrying MongoDB…", "warn");
+  setTimeout(() => { void flushSegmentQueue(); }, 500);
+} else if (points.length) {
+  setTimeout(() => { void persistSegment("startup_retry", "active", revision < 1); }, 500);
 }
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
