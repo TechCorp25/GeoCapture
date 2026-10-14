@@ -180,6 +180,7 @@ class NetworkTests(unittest.TestCase):
     def test_partial_primary_retries_and_exhausted_providers_fail(self):
         with patch.object(streets, "fetch_json", side_effect=[{"remark": "timeout"}, {"elements": block()}]):
             self.assertEqual(streets.road_network(0, 0), block())
+        streets._network_cache.clear()
         with patch.object(streets, "fetch_json", side_effect=streets.LookupUnavailable("failed")):
             with self.assertRaisesRegex(streets.LookupUnavailable, "providers unavailable"):
                 streets.road_network(0, 0)
