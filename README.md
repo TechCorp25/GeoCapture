@@ -98,9 +98,41 @@ Provider documentation:
 - [Overpass QL](https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL)
 - [OpenStreetMap copyright and licence](https://www.openstreetmap.org/copyright)
 
+## Field capture latency and data integrity
+
+A successfully validated GPS point is saved synchronously into browser local
+storage and the capture button is immediately released. MongoDB writes run in a
+single asynchronous, revision-ordered queue; a new bay replaces the pending
+snapshot with the newest complete segment revision without cancelling an
+in-flight request. Only the exact acknowledged snapshot is removed. Offline or
+failed writes retain the latest snapshot for retry on reconnect/reload or during
+the next operator action. This queue deliberately does **not** create a
+background location watcher or transmit new coordinates without a capture.
+
+**Finish & clear** still waits for MongoDB acknowledgement before discarding the
+current segment, so a completed segment cannot be lost when the operator moves
+on. Undoing the last bay syncs an empty revision to avoid leaving removed bays
+in MongoDB. Browser local storage must not be manually cleared while a snapshot
+is unsynchronised; JSON export remains available as an independent backup.
+
+GPS capture now accepts two distinct fresh, qualifying fixes after 1.5 seconds,
+or one fresh fix that meets the unchanged selected accuracy after a short
+2.7-second settling period. It retains the best observed accurate fix and
+terminates after 16 seconds if the device cannot meet the threshold. Device GPS
+quality, permissions, and sky conditions still determine real capture time;
+the application cannot guarantee a high-accuracy fix within a fixed deadline.
+
+Street lookup retains the suburb/postcode validation and per-coordinate road
+geometry resolver. A small ten-minute in-memory geometry cache speeds nearby
+repeat lookups without caching chosen street names or intersections; unhealthy
+OSM endpoints are temporarily skipped after failure. The first uncached lookup
+still depends on the external Overpass provider. Predictable sub-second
+intersection suggestions would require a provisioned, locally indexed
+OpenStreetMap road-graph service rather than an unreliable public API.
+
 ## GPS quality
 
-Each capture requests uncached high-accuracy browser geolocation updates for up to 30 seconds. It discards stale or invalid readings, requires multiple fresh fixes before accepting early, and retains the fix with the best device-reported accuracy. A point is **not saved** unless it meets the selected accuracy requirement (±5 m by default). The handset's precise-location setting, GPS hardware, surroundings, and satellite visibility still determine the accuracy available; use the application outdoors with a clear view of the sky.
+Each capture requests uncached high-accuracy browser geolocation updates for up to 16 seconds. It discards stale or invalid readings, requires multiple fresh fixes before accepting early, and retains the fix with the best device-reported accuracy. A point is **not saved** unless it meets the selected accuracy requirement (±5 m by default). The handset's precise-location setting, GPS hardware, surroundings, and satellite visibility still determine the accuracy available; use the application outdoors with a clear view of the sky.
 
 The reported accuracy, number of fresh samples, sampling duration, and required accuracy are included with each exported point. Captures are retained locally immediately and autosaved to MongoDB when configured; JSON export remains available offline.
 
