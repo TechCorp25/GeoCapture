@@ -7,6 +7,11 @@ on:
     paths:
       - "scripts/audit_municipal_candidates.py"
       - "scripts/fetch_vicmap_lga.py"
+      - "scripts/verify_phase3_footscray.py"
+      - "municipal-road-phase3.js"
+      - "data/reviewed/maribyrnong-footscray-phase3-20261015.geojson"
+      - "tests/phase3-municipal.test.cjs"
+      - "tests/test_phase3_source_pack.py"
       - "tests/test_municipal_candidate_audit.py"
       - ".github/workflows/phase3-municipal-audit.yml"
 permissions:
@@ -56,6 +61,14 @@ jobs:
             --dispositions work/phase3/candidate-dispositions.json \
             --verified work/phase3/eligible-for-release-review.geojson \
             --report work/phase3/independent-audit.json
+      - name: Verify exact source and independently audited Footscray 32-block package
+        run: |
+          python -m scripts.verify_phase3_footscray \
+            --source work/phase3/source.geojson \
+            --manifest work/phase3/source-manifest.json \
+            --candidates work/phase3/candidates.geojson \
+            --boundary work/phase3/maribyrnong-lga.geojson \
+            --boundary-manifest work/phase3/maribyrnong-lga-manifest.json
       - name: Preserve evidence for human release review (NOT published)
         if: always()
         uses: actions/upload-artifact@v4
