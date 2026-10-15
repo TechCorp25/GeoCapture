@@ -126,7 +126,7 @@ def release(folder, destination, baseline):
     manifest = {
         "schema": "geocapture.municipal_road_packs.v1",
         "municipality": "CITY OF MARIBYRNONG",
-        "version": "maribyrnong-phase4-20261015",
+        "version": VERSION,
         "sourceRoadSHA256": PINNED_ROAD_SHA,
         "councilPolygonSHA256": PINNED_LGA_SHA,
         "licence": "CC BY 4.0", "attribution": "State of Victoria",
