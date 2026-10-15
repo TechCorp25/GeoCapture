@@ -46,5 +46,25 @@ class NonFieldGateTests(unittest.TestCase):
         self.assertIn("candidate block dispositions do not reconcile", errors)
 
 
+    def test_class0_verified_unsupported_cases_have_explicit_pfi_evidence(self):
+        source = json.loads((ROOT / "docs/phase4-verified-unsupported-class0-freeways-20261015.json").read_text(encoding="utf-8"))
+        entries = source["records"]
+        self.assertEqual(len(entries), 8)
+        self.assertEqual(len({row["candidateId"] for row in entries}), 8)
+        self.assertEqual(self.record["inventory"]["blocks"]["unsupported_for_vehicular_lookup"], 23 + len(entries))
+        self.assertEqual(self.record["inventory"]["blocks"]["requiring_evidence"], 226 - 23 - len(entries))
+        self.assertEqual({row["disposition"] for row in entries}, {"VERIFIED_UNSUPPORTED"})
+        self.assertEqual({row["physicalVerificationStatus"] for row in entries}, {"NOT_PERFORMED"})
+        self.assertTrue(all(row["publicationEligible"] is False for row in entries))
+        for row in entries:
+            n = len(row["sourcePFIs"])
+            self.assertGreater(n, 0)
+            self.assertEqual(len(row["networkUFIEndpoints"]), n)
+            self.assertEqual(row["classCodes"], [0] * n)
+            self.assertEqual(row["vehicularAccessCodes"], ["1"] * n)
+            self.assertEqual(row["roadStatusCodes"], ["O"] * n)
+            self.assertTrue("WEST GATE" in row["street"])
+
+
 if __name__ == "__main__":
     unittest.main()
