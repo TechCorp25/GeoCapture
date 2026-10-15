@@ -110,7 +110,7 @@
         <label for="side">Side of street</label>
         <select id="side">
           <option value="">Select</option>
-          <option>NORTH</option><option>SOUTH</option><option>EAST</option><option>WEST</option>
+          <option>NORTH</option><option>SOUTH</option><option>EAST</option><option>WEST</option><option>CENTER</option>
         </select>
       </div>
       <div class="full checkbox-row">
@@ -164,6 +164,8 @@
   </section>
 
   <section class="card">
+    <div style="margin-bottom:12px"><label for="bayAddress">Bay address (optional)</label><input id="bayAddress" type="text" maxlength="250" placeholder="Street number and address" autocomplete="street-address"></div>
+    <div class="checkbox-row" style="margin-bottom:12px"><input id="addressOnly" type="checkbox"><label for="addressOnly">Capture using address instead of GPS</label></div>
     <button id="captureBtn" class="capture">📍 Capture next bay</button>
     <div id="status" class="status">Ready.</div>
     <div id="storageStatus" class="storage">Storage: checking database configuration…</div>
@@ -182,7 +184,7 @@
     </div>
     <div style="overflow:auto">
       <table>
-        <thead><tr><th>Bay</th><th>Latitude</th><th>Longitude</th><th>±m</th></tr></thead>
+        <thead><tr><th>Bay</th><th>Latitude / address</th><th>Longitude</th><th>±m</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -426,9 +428,9 @@ function render() {
   $("rows").innerHTML = points.map((p, index) => `
     <tr>
       <td>${pointLabel(p, index)}</td>
-      <td>${p.latitude.toFixed(8)}</td>
-      <td>${p.longitude.toFixed(8)}</td>
-      <td>${p.accuracy.toFixed(1)}</td>
+      <td>${p.latitude == null ? String(p.address || "Address only").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])) : p.latitude.toFixed(8)}</td>
+      <td>${p.longitude == null ? "—" : p.longitude.toFixed(8)}</td>
+      <td>${p.accuracy == null ? "—" : p.accuracy.toFixed(1)}</td>
     </tr>`).join("");
   $("count").textContent = points.length;
   updateModeUI();
@@ -946,6 +948,29 @@ $("captureBtn").addEventListener("click", async () => {
     $("clearBtn").disabled = true;
     setStatus(`Capturing ${label}…`, "warn");
 
+    const address = $("bayAddress").value.trim();
+    const addressOnly = $("addressOnly").checked;
+    if (address.length > 250) throw new Error("Bay address must be at most 250 characters.");
+    if (addressOnly && !address) throw new Error("Enter a bay address for address-only capture.");
+    if (addressOnly) {
+      const point = {bay, unnumbered, captureSequence, address, locationSource:"manual_address",
+        latitude:null, longitude:null, accuracy:null, capturedAt:new Date().toISOString()};
+      points.push(point);
+      try { render(); } catch (error) {
+        points.pop();
+        throw new Error("Bay not saved: device local storage is unavailable or full.");
+      }
+      $("fix").hidden = false;
+      $("mBay").textContent = pointLabel(point, points.length - 1);
+      $("mAcc").textContent = "Address only";
+      $("mLat").textContent = "—";
+      $("mLon").textContent = "—";
+      $("bayAddress").value = "";
+      $("addressOnly").checked = false;
+      setStatus(`Bay ${captureSequence} captured by address; GPS coordinates not measured.`, "warn");
+      void persistSegment("capture", "active", true);
+      return;
+    }
     const result = await bestFixSingleTap();
     const pos = result.position;
     const c = pos.coords;
@@ -953,6 +978,8 @@ $("captureBtn").addEventListener("click", async () => {
       bay,
       unnumbered,
       captureSequence,
+      address: address || null,
+      locationSource: "device_gps",
       latitude: c.latitude,
       longitude: c.longitude,
       accuracy: c.accuracy,
@@ -969,6 +996,7 @@ $("captureBtn").addEventListener("click", async () => {
     };
 
     points.push(point);
+    $("bayAddress").value = "";
     try {
       render();
     } catch (error) {

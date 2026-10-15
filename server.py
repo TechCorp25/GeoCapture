@@ -81,7 +81,7 @@ def validate_segment_payload(payload):
         raise ValueError("segment.street is required.")
     if not isinstance(between, list) or len(between) != 2 or not all(isinstance(v, str) and v.strip() for v in between):
         raise ValueError("segment.between must contain two street names.")
-    if side not in {"NORTH", "SOUTH", "EAST", "WEST"}:
+    if side not in {"NORTH", "SOUTH", "EAST", "WEST", "CENTER"}:
         raise ValueError("segment.side is invalid.")
 
     # v2 clients remain readable/writable; v3 validates optional identifiers and provider consistency.
@@ -111,9 +111,19 @@ def validate_segment_payload(payload):
     for index, bay in enumerate(bays):
         if not isinstance(bay, dict):
             raise ValueError(f"bays[{index}] must be an object.")
+        address = bay.get("address")
+        if address is not None and (not isinstance(address, str) or not address.strip() or len(address) > 250):
+            raise ValueError(f"bays[{index}].address must be non-empty text up to 250 characters.")
+        source = bay.get("locationSource", "device_gps")
+        if source not in ("device_gps", "manual_address"):
+            raise ValueError(f"bays[{index}].locationSource is invalid.")
+        if source == "manual_address" and not address:
+            raise ValueError(f"bays[{index}] requires an address.")
         for field in ("latitude", "longitude", "accuracy"):
             value = bay.get(field)
-            if not isinstance(value, (int, float)):
+            if source == "manual_address" and value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"bays[{index}].{field} must be numeric.")
 
     return segment_id, revision
