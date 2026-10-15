@@ -35,11 +35,13 @@ class VicmapTopologyTests(unittest.TestCase):
     def test_branch_ambiguity_rejected(self):
         d=network()
         d["features"].append(line(7,"BRANCH AVENUE",[[144.9,-37.801],[144.901,-37.801]],102,108))
+        d["features"].append(line(8,"OTHER ROAD",[[144.9,-37.801],[144.899,-37.801]],102,109))
+        # Two distinct crossing roads at the same junction are explicitly ambiguous.
         candidates,_=derive_candidates(d)
         self.assertFalse(any(x["properties"]["street"]=="TALBOT STREET" for x in candidates["features"]))
     def test_road_crossing_without_shared_node_not_an_intersection(self):
         d=network()
-        d["features"][4]["properties"]["from_ufi"]=999
+        d["features"][4]["properties"]["to_ufi"]=999
         d["features"][5]["properties"]["from_ufi"]=999
         # C endpoint no longer connects Hook Road, so no verified other end.
         c,_=derive_candidates(d)
