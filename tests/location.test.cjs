@@ -216,3 +216,34 @@ test("manual side correction remains authoritative after local auto-fill", async
   assert.equal(a.elements.side.value,"SOUTH");
   assert.equal(JSON.parse(a.saved.get("civicmaps_form")).side,"SOUTH");
 });
+
+
+test('local audited road identity, block ID and GPS confidence persist, manual street edits invalidate source identity',async()=>{
+  const sample={status:"matched",source:"local",street:"TALBOT STREET",
+    between:["COWPER STREET","DEAD END"],side:"",distance:3.4,
+    roadSegmentId:"maribyrnong:vicmap-pfi-5669272:0",
+    attribution:{source:"State of Victoria — Vicmap Transport TR_ROAD",
+      licence:"CC BY 4.0", reviewState:"OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING",
+      snapshotSHA256:"3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb"},
+    warnings:["Select side manually."]};
+  const a=app({resolve:()=>sample});
+  await a.lookup();
+  assert.equal(a.requested(),0,"no remote provider used when local source matches");
+  assert.equal(a.elements.segment.value,"TALBOT STREET");
+  a.elements.side.value="SOUTH"; a.elements.startBay.value="1";
+  const payload=JSON.parse(a.run('JSON.stringify(buildPayload())'));
+  assert.equal(payload.segment.roadNetworkSegmentId,sample.roadSegmentId);
+  assert.equal(payload.segment.roadNetworkBlockId,"maribyrnong:vicmap-pfi-5669272");
+  assert.equal(payload.segment.roadMatch.source,"local");
+  assert.equal(payload.segment.roadMatch.distanceMetres,3.4);
+  assert.equal(payload.segment.roadMatch.gpsAccuracyMetres,4);
+  assert.equal(payload.segment.roadMatch.sourceReviewState,
+      "OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING");
+  assert.equal(payload.segment.side,"SOUTH","manual side remains authoritative");
+  assert.equal(JSON.parse(a.saved.get('civicmaps_form')).matchedRoad.id,sample.roadSegmentId);
+  await a.input('betweenB','MANUAL ROAD');
+  const changed=JSON.parse(a.run('JSON.stringify(buildPayload())'));
+  assert.equal(changed.segment.roadNetworkSegmentId,undefined);
+  assert.equal(changed.segment.between[1],"MANUAL ROAD");
+  assert.equal(JSON.parse(a.saved.get('civicmaps_form')).matchedRoad,null);
+});
