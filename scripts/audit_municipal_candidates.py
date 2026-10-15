@@ -64,7 +64,7 @@ def validate_boundary(boundary, manifest, raw):
     geometry = feature.get('geometry') or {}
     if geometry.get('type') not in ('Polygon', 'MultiPolygon'):
         raise ValueError('Expected polygon or multipolygon')
-    if 'Vicmap_Admin/MapServer/9' not in manifest.get('serviceUrl', ''):
+    if not any(token in manifest.get('serviceUrl', '') for token in ('Vicmap_Admin/MapServer/9', 'Vicmap_Admin/FeatureServer/9')):
         raise ValueError('Expected official Vicmap Admin LGA layer 9')
     if manifest.get('licence') != 'CC BY 4.0':
         raise ValueError('Official council boundary licence missing')
