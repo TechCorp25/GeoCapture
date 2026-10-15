@@ -233,7 +233,7 @@ Provider recovery: both Overpass requests use HTTPS GET with a 12-second socket 
 ### Expanding offline municipal coverage
 
 `local-road-data.js` is the recovered 146-segment historical Melbourne CBD seed.
-`municipal-road-pack.js` is initially an intentionally empty extension point.
+`municipal-road-pack.js` contains **one audited Footscray pilot block**: TALBOT STREET between COWPER STREET and a verified DEAD END (reviewed 15 October 2026). All remaining Footscray/Maribyrnong roads are unapproved; see `docs/maribyrnong-vicmap-review-20261015.md`.
 Do **not** label Footscray, Maribyrnong or another municipality as covered until
 real geometric road segments with audited between-street boundaries have been
 packaged, regression-tested, and validated in field use.
@@ -265,8 +265,8 @@ version, licence and audit outputs separately. Validate postcode/suburb matching
 parallel streets, road curves, junctions, dead ends, offline mode and side labels
 on field devices before enabling municipality-wide claims.
 
-Current locally indexed coverage is intentionally restricted to the historical
-CBD seed; the July CivicMAPS index declares 3,974 source City of Melbourne road
+Current locally indexed coverage is limited to the historical CBD seed plus the
+reviewed Talbot Street Footscray pilot; the July CivicMAPS index declares 3,974 source City of Melbourne road
 segments, but its imported suburb/type data and operational GPS coverage remain
 unverified. The large historical `LOCAL_STREET_BLOCKS` table alone does not
 contain complete GPS axes and must not be used to invent them.
