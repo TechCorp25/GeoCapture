@@ -1,0 +1,1097 @@
+{
+  "type": "FeatureCollection",
+  "name": "maribyrnong-footscray-phase3-20261015",
+  "sourceDescription": "Explicitly source-reviewed operational single-edge Footscray TR_ROAD features after independent polygon and topology audit; not a general municipal completeness claim.",
+  "roadSourceSHA256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+  "lgaSourceSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90784562300007,
+            -37.80406661508593
+          ],
+          [
+            144.90702883300003,
+            -37.80381976608593
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-6258331",
+        "vicmapPFI": 6258331,
+        "street": "BUNBURY STREET",
+        "from": "MARIBYRNONG STREET",
+        "to": "LEVIEN LANE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9079280310001,
+            -37.803890603085925
+          ],
+          [
+            144.90657891400008,
+            -37.80349231508596
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-11667385",
+        "vicmapPFI": 11667385,
+        "street": "BUNBURY STREET",
+        "from": "MARIBYRNONG STREET",
+        "to": "MORELAND STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90702883300003,
+            -37.80381976608593
+          ],
+          [
+            144.90650078400006,
+            -37.803660175085916
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-6256712",
+        "vicmapPFI": 6256712,
+        "street": "BUNBURY STREET",
+        "from": "LEVIEN LANE",
+        "to": "MORELAND STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90514663600004,
+            -37.80317235108592
+          ],
+          [
+            144.9037480280001,
+            -37.80275426808594
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5669805",
+        "vicmapPFI": 5669805,
+        "street": "BUNBURY STREET",
+        "from": "WHITEHALL STREET",
+        "to": "COWPER STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9023016650001,
+            -37.79937558308599
+          ],
+          [
+            144.90111147300001,
+            -37.79924400608599
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667440",
+        "vicmapPFI": 5667440,
+        "street": "BYRON STREET",
+        "from": "DALMAHOY STREET",
+        "to": "LEEDS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9023016650001,
+            -37.79937558308599
+          ],
+          [
+            144.90348671800007,
+            -37.79950657608597
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667545",
+        "vicmapPFI": 5667545,
+        "street": "BYRON STREET",
+        "from": "DALMAHOY STREET",
+        "to": "MOORE STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90111147300001,
+            -37.79924400608599
+          ],
+          [
+            144.9001960710001,
+            -37.799142804085996
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-19574757",
+        "vicmapPFI": 19574757,
+        "street": "BYRON STREET",
+        "from": "LEEDS STREET",
+        "to": "UNITY LANE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90419996800006,
+            -37.799522726085975
+          ],
+          [
+            144.90349817800006,
+            -37.799442505085956
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667557",
+        "vicmapPFI": 5667557,
+        "street": "BYRON STREET",
+        "from": "SHELLEY STREET",
+        "to": "MOORE STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90525256400008,
+            -37.79836367408599
+          ],
+          [
+            144.9053685440001,
+            -37.79772839008601
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666848",
+        "vicmapPFI": 5666848,
+        "street": "COWPER STREET",
+        "from": "DONALD STREET",
+        "to": "NEWELL STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90525256400008,
+            -37.79836367408599
+          ],
+          [
+            144.90511411700004,
+            -37.798984505085976
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667231",
+        "vicmapPFI": 5667231,
+        "street": "COWPER STREET",
+        "from": "DONALD STREET",
+        "to": "RYAN STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9039780490001,
+            -37.80225195908597
+          ],
+          [
+            144.90423083000007,
+            -37.801699906085965
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-21914804",
+        "vicmapPFI": 21914804,
+        "street": "COWPER STREET",
+        "from": "TALBOT STREET",
+        "to": "FALCON COURT",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90423083000007,
+            -37.801699906085965
+          ],
+          [
+            144.90465147100008,
+            -37.80078123808596
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-21914805",
+        "vicmapPFI": 21914805,
+        "street": "COWPER STREET",
+        "from": "FALCON COURT",
+        "to": "WINGFIELD STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90465147100008,
+            -37.80078123808596
+          ],
+          [
+            144.90484753700002,
+            -37.800353045085956
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668374",
+        "vicmapPFI": 5668374,
+        "street": "COWPER STREET",
+        "from": "WINGFIELD STREET",
+        "to": "HOPKINS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.89985005800008,
+            -37.804967802085926
+          ],
+          [
+            144.90098540000008,
+            -37.80531440708594
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5671010",
+        "vicmapPFI": 5671010,
+        "street": "LAWSON PLACE",
+        "from": "LAWSON STREET",
+        "to": "HYDE STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90086371600012,
+            -37.80157184008595
+          ],
+          [
+            144.9009647590001,
+            -37.80101611808595
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668844",
+        "vicmapPFI": 5668844,
+        "street": "LEEDS STREET",
+        "from": "IRVING STREET",
+        "to": "PAISLEY STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90103703400007,
+            -37.80061859808597
+          ],
+          [
+            144.9011614860001,
+            -37.79993412208597
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668264",
+        "vicmapPFI": 5668264,
+        "street": "LEEDS STREET",
+        "from": "CHAMBERS STREET",
+        "to": "HOPKINS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90122911600008,
+            -37.798563399086014
+          ],
+          [
+            144.9013448490001,
+            -37.79793491308597
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666989",
+        "vicmapPFI": 5666989,
+        "street": "LEEDS STREET",
+        "from": "RYAN STREET",
+        "to": "DONALD STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.8990000020001,
+            -37.802986942085944
+          ],
+          [
+            144.89949993800008,
+            -37.80335049608593
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5669891",
+        "vicmapPFI": 5669891,
+        "street": "MECHANICS WAY",
+        "from": "NICHOLSON STREET",
+        "to": "MCNAB AVENUE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9081377110001,
+            -37.799375248086
+          ],
+          [
+            144.90947974300002,
+            -37.79952780008598
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667559",
+        "vicmapPFI": 5667559,
+        "street": "NEILSON PLACE",
+        "from": "HALLENSTEIN STREET",
+        "to": "JOSEPH ROAD",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90005178100012,
+            -37.79714478208601
+          ],
+          [
+            144.90146181500006,
+            -37.797299580086
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-14419072",
+        "vicmapPFI": 14419072,
+        "street": "NEWELL STREET",
+        "from": "NICHOLSON STREET",
+        "to": "LEEDS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9053685440001,
+            -37.79772839008601
+          ],
+          [
+            144.9060772470001,
+            -37.797808966086
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666511",
+        "vicmapPFI": 5666511,
+        "street": "NEWELL STREET",
+        "from": "COWPER STREET",
+        "to": "SWABY SQUARE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9060772470001,
+            -37.797808966086
+          ],
+          [
+            144.90658407800004,
+            -37.797866576086015
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666554",
+        "vicmapPFI": 5666554,
+        "street": "NEWELL STREET",
+        "from": "SWABY SQUARE",
+        "to": "VIPONT STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90005178100012,
+            -37.79714478208601
+          ],
+          [
+            144.90015159600011,
+            -37.796589887086014
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666097",
+        "vicmapPFI": 5666097,
+        "street": "NICHOLSON STREET",
+        "from": "NEWELL STREET",
+        "to": "COWARD STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90005178100012,
+            -37.79714478208601
+          ],
+          [
+            144.89993635000008,
+            -37.79778638608601
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666493",
+        "vicmapPFI": 5666493,
+        "street": "NICHOLSON STREET",
+        "from": "NEWELL STREET",
+        "to": "DONALD STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.8998251160001,
+            -37.798404729085995
+          ],
+          [
+            144.89993635000008,
+            -37.79778638608601
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666886",
+        "vicmapPFI": 5666886,
+        "street": "NICHOLSON STREET",
+        "from": "RYAN STREET",
+        "to": "DONALD STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.89705312500007,
+            -37.80060553208595
+          ],
+          [
+            144.89801441500003,
+            -37.800724115085984
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668338",
+        "vicmapPFI": 5668338,
+        "street": "PAISLEY STREET",
+        "from": "FRENCH STREET",
+        "to": "ALBERT STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90194089700003,
+            -37.806683048085915
+          ],
+          [
+            144.90251115400008,
+            -37.80685427108592
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-15515433",
+        "vicmapPFI": 15515433,
+        "street": "PARKER STREET",
+        "from": "COWPER STREET",
+        "to": "GREENWOOD LANE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9024188740001,
+            -37.798697848085986
+          ],
+          [
+            144.90122911600008,
+            -37.798563399086014
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667074",
+        "vicmapPFI": 5667074,
+        "street": "RYAN STREET",
+        "from": "DALMAHOY STREET",
+        "to": "LEEDS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90511411700004,
+            -37.798984505085976
+          ],
+          [
+            144.905726995,
+            -37.79905514008597
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5667261",
+        "vicmapPFI": 5667261,
+        "street": "RYAN STREET",
+        "from": "COWPER STREET",
+        "to": "RAILWAY PLACE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90419996800006,
+            -37.799522726085975
+          ],
+          [
+            144.90407941,
+            -37.80026575608599
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668005",
+        "vicmapPFI": 5668005,
+        "street": "SHELLEY STREET",
+        "from": "BYRON STREET",
+        "to": "HOPKINS STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90673972600007,
+            -37.79698779708603
+          ],
+          [
+            144.906634036,
+            -37.79758450808597
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5666353",
+        "vicmapPFI": 5666353,
+        "street": "VIPONT STREET",
+        "from": "PALMER STREET",
+        "to": "SWABY SQUARE",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.90465147100008,
+            -37.80078123808596
+          ],
+          [
+            144.90605164200008,
+            -37.80120434008598
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-5668618",
+        "vicmapPFI": 5668618,
+        "street": "WINGFIELD STREET",
+        "from": "COWPER STREET",
+        "to": "WHITEHALL STREET",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "boundaryEndpointsVerified": true,
+        "reviewState": "OFFICIAL_TOPOLOGY_VALIDATED_HANDSET_QA_PENDING",
+        "reviewedOn": "2026-10-15",
+        "sourceSha256": "260d28ebcaadea2a5681c85c4245665ee44b8b0d3b1caa91c4bba99887728649",
+        "councilBoundarySha256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+        "reviewEvidence": "Original TR_ROAD PFI and UFI network edge independently reconstructed; distinct named intersections at endpoints; official polygon containment; road class 5 operational and vehicular-access permitted; GPS field QA pending.",
+        "sourceURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+        "sourceLicence": "CC BY 4.0"
+      }
+    }
+  ]
+}
