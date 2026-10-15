@@ -203,6 +203,7 @@
 <script src="./local-road-data.js"></script>
 <script src="./municipal-road-pack.js"></script>
 <script src="./municipal-road-phase3.js"></script>
+<script src="./municipal-road-loader.js"></script>
 <script src="./local-street-lookup.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -638,7 +639,24 @@ async function autoFillLocation(reuseFix=false) {
       locationMessage("Fields changed during GPS acquisition. Entries kept; tap auto-fill again.", "warn");
       return;
     }
-    // Resolve locally first. The April CivicMAPS engine never calls a remote API.
+    // Load only the municipality packages intersecting the GPS fix.
+    // Cached package data is same-origin, checksum verified and available offline.
+    let packageWarning = "";
+    if (typeof GeoCaptureMunicipalPacks !== "undefined") {
+      try {
+        await GeoCaptureMunicipalPacks.ensureFor(
+          lastLookupFix.coords.latitude, lastLookupFix.coords.longitude);
+      } catch (error) {
+        // Existing local road packs and editable form must remain usable.
+        packageWarning = "Municipal pack unavailable; using existing local coverage. ";
+      }
+    }
+    if (request !== locationRequest || identity !== segmentId || points.length) return;
+    if (editVersion !== locationEditVersion) {
+      locationMessage("Fields changed during street-pack loading. Entries kept.", "warn");
+      return;
+    }
+    // Resolve locally first. Only unknown/unsupported coverage uses provider fallback.
     const local = typeof GeoCaptureLocalLookup !== "undefined"
       ? GeoCaptureLocalLookup.resolve(lastLookupFix.coords.latitude, lastLookupFix.coords.longitude,
           lastLookupFix.coords.accuracy, {street:initial.segment.trim(), suburb:initial.suburb.trim(),
@@ -710,7 +728,7 @@ async function autoFillLocation(reuseFix=false) {
       $("googleReference").textContent = `Google Maps reference: ${result.googleReference} (display only)`;
       $("googleReference").hidden = false;
     }
-    const warnings = Array.isArray(result.warnings) ? result.warnings.join(" ") : "";
+    const warnings = packageWarning + (Array.isArray(result.warnings) ? result.warnings.join(" ") : "");
     const candidates = !result.street && result.candidates?.length ? ` Nearby streets: ${result.candidates.join(", ")}.` : "";
     locationMessage(`${filled ? `${filled} field${filled === 1 ? "" : "s"} filled.` : "Existing entries kept. Clear a field to fill it again."} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`,
       warnings || retainedBoundaryMismatch ? "warn" : "good");

@@ -1,5 +1,11 @@
-const CACHE="civicmaps-gps-v14-footscray-32-reviewed";
-const ASSETS=["./","./index.html","./manifest.json","./local-road-data.js","./municipal-road-pack.js","./municipal-road-phase3.js","./local-street-lookup.js"];
+const CACHE="civicmaps-gps-v15-maribyrnong-reviewed-packages";
+const ASSETS=["./","./index.html","./manifest.json","./local-road-data.js","./municipal-road-pack.js","./municipal-road-phase3.js","./municipal-road-loader.js","./local-street-lookup.js",
+"./municipal-data/manifest.json",
+"./municipal-data/braybrook.json","./municipal-data/footscray.json",
+"./municipal-data/kingsville.json","./municipal-data/maidstone.json",
+"./municipal-data/maribyrnong.json","./municipal-data/seddon.json",
+"./municipal-data/shared-localities.json","./municipal-data/tottenham.json",
+"./municipal-data/west-footscray.json","./municipal-data/yarraville.json"];
 self.addEventListener("install",e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
 ));

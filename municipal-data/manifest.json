@@ -1,0 +1,128 @@
+{
+  "schema": "geocapture.municipal_road_packs.v1",
+  "municipality": "CITY OF MARIBYRNONG",
+  "version": "maribyrnong-phase4-20261015",
+  "sourceRoadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
+  "councilPolygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+  "licence": "CC BY 4.0",
+  "attribution": "State of Victoria",
+  "publicationReviewState": "OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING",
+  "operationalCoverageComplete": false,
+  "publishedExistingRoadBlocks": 33,
+  "newSourceQualifiedRoadBlocks": 1454,
+  "newGeometryEdges": 2108,
+  "unresolvedCandidateBlocks": 407,
+  "unverifiedDeadEndsDoNotMatch": true,
+  "packages": {
+    "braybrook": {
+      "file": "./municipal-data/braybrook.json",
+      "boundsWGS84": [
+        144.84465054200007,
+        -37.79697408008602,
+        144.86575200100003,
+        -37.773625820086174
+      ],
+      "roadBlocks": 195,
+      "sha256": "92d737d31dddeec609ebbfe527673fe5827163ff77bd0e1e8eb8d518acdb2fcb"
+    },
+    "footscray": {
+      "file": "./municipal-data/footscray.json",
+      "boundsWGS84": [
+        144.87940080300007,
+        -37.811636717085854,
+        144.907945734,
+        -37.78740444908606
+      ],
+      "roadBlocks": 199,
+      "sha256": "0b97426b6b847a6571dc1ac3a53d2697a4afe57012825ac106a74ca596c4e14f"
+    },
+    "kingsville": {
+      "file": "./municipal-data/kingsville.json",
+      "boundsWGS84": [
+        144.86987562100012,
+        -37.81200914208588,
+        144.88531282500003,
+        -37.80298195708597
+      ],
+      "roadBlocks": 29,
+      "sha256": "63dd0e92e6675365b6a53e32450352b7abbb3b46f56119d042accd47e7aca156"
+    },
+    "maidstone": {
+      "file": "./municipal-data/maidstone.json",
+      "boundsWGS84": [
+        144.86413102400002,
+        -37.79110466808602,
+        144.88512396300007,
+        -37.774610620086186
+      ],
+      "roadBlocks": 168,
+      "sha256": "343030112fed42f407f4f69d35a27639444cf03e27ea7c712970148482cd1c9f"
+    },
+    "maribyrnong": {
+      "file": "./municipal-data/maribyrnong.json",
+      "boundsWGS84": [
+        144.8731103670001,
+        -37.788779127086045,
+        144.90154780700004,
+        -37.762342613086304
+      ],
+      "roadBlocks": 233,
+      "sha256": "ef2c771f04c8d73a314bcfc12aa60aba6cd76345398af15cb57226f1d6e50c82"
+    },
+    "seddon": {
+      "file": "./municipal-data/seddon.json",
+      "boundsWGS84": [
+        144.88531282500003,
+        -37.81040113208592,
+        144.899532431,
+        -37.80224270108596
+      ],
+      "roadBlocks": 107,
+      "sha256": "266c8207a4f4327a585b34e87e71a615fd4bd9f0139d2dcc48ec180ccaa41549"
+    },
+    "shared-localities": {
+      "file": "./municipal-data/shared-localities.json",
+      "boundsWGS84": [
+        144.85991472400008,
+        -37.813486613085864,
+        144.90023695500008,
+        -37.77481461708616
+      ],
+      "roadBlocks": 87,
+      "sha256": "ffb9f922b064745641a7498e081db26f8a05ec64e404928c1c337b36fc4d75b0"
+    },
+    "tottenham": {
+      "file": "./municipal-data/tottenham.json",
+      "boundsWGS84": [
+        144.84939100200006,
+        -37.814098556085874,
+        144.85867602200005,
+        -37.79813552208602
+      ],
+      "roadBlocks": 6,
+      "sha256": "be1e88fcf94fdff89511c6f0e58812f4f6dcdbab7cd590b38eacede409952078"
+    },
+    "west-footscray": {
+      "file": "./municipal-data/west-footscray.json",
+      "boundsWGS84": [
+        144.8601256060001,
+        -37.813486613085864,
+        144.88169136800002,
+        -37.789879797086066
+      ],
+      "roadBlocks": 146,
+      "sha256": "d25cca7307906bab61ea1df6fb52a6f4624e2a6c32e4e541a474c082d2b567fb"
+    },
+    "yarraville": {
+      "file": "./municipal-data/yarraville.json",
+      "boundsWGS84": [
+        144.8620519100001,
+        -37.82439968308579,
+        144.8989806190001,
+        -37.80991912308591
+      ],
+      "roadBlocks": 284,
+      "sha256": "c1c1debce0083c524bba29fb09a07b5883124002cd3d1f618fed1a3f004113ed"
+    }
+  }
+}
