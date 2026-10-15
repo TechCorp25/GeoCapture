@@ -11,7 +11,7 @@ from pathlib import Path
 import urllib.parse
 import urllib.request
 
-LAYER = 'https://vicmap.land.vic.gov.au/hosting/rest/services/vicmap/Vicmap_Admin/MapServer/9'
+LAYER = 'https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Admin/FeatureServer/9'
 URL = LAYER + '/query'
 
 
