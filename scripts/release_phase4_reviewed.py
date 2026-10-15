@@ -152,6 +152,11 @@ def release(folder, destination, baseline):
             "sha256": hashlib.sha256(output[filename]).hexdigest()
         }
     destination.mkdir(parents=True, exist_ok=True)
+    existing_manifest = destination / "manifest.json"
+    if existing_manifest.exists():
+        installed_version = json.loads(existing_manifest.read_text(encoding="utf-8")).get("version")
+        if installed_version != VERSION:
+            raise ValueError("Refusing to overwrite supplemental source-reviewed release with legacy staging builder")
     for filename, value in output.items():
         (destination / filename).write_bytes(value)
     (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
