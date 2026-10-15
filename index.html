@@ -417,6 +417,12 @@ function setStorageStatus(msg, cls="") {
 }
 
 function render() {
+  // Durability is the acceptance gate: never show a newly captured bay until
+  // its full local points array has been committed successfully.
+  const serialized = JSON.stringify(points);
+  if (localStorage.getItem(POINTS_KEY) !== serialized) {
+    localStorage.setItem(POINTS_KEY, serialized);
+  }
   $("rows").innerHTML = points.map((p, index) => `
     <tr>
       <td>${pointLabel(p, index)}</td>
@@ -425,7 +431,6 @@ function render() {
       <td>${p.accuracy.toFixed(1)}</td>
     </tr>`).join("");
   $("count").textContent = points.length;
-  localStorage.setItem(POINTS_KEY, JSON.stringify(points));
   updateModeUI();
 }
 
@@ -952,7 +957,14 @@ $("captureBtn").addEventListener("click", async () => {
     };
 
     points.push(point);
-    render();
+    try {
+      render();
+    } catch (error) {
+      // A full/private-mode localStorage must not leave an uncommitted bay in
+      // memory (or advance the bay numbering) while the UI claims success.
+      points.pop();
+      throw new Error("Bay not saved: device local storage is unavailable or full. Export existing records and free space before retrying.");
+    }
 
     $("fix").hidden = false;
     $("mBay").textContent = pointLabel(point, points.length - 1);
@@ -975,8 +987,14 @@ $("captureBtn").addEventListener("click", async () => {
 
 $("undoBtn").addEventListener("click", async () => {
   if (!points.length) return;
-  points.pop();
-  render();
+  const removed = points.pop();
+  try {
+    render();
+  } catch (error) {
+    points.push(removed);
+    setStatus("Undo not saved: device local storage is unavailable or full. Existing bay retained.", "bad");
+    return;
+  }
 
   // A zero-bay revision is also synchronised; a stale server copy must not
   // silently retain a bay the operator explicitly removed.
