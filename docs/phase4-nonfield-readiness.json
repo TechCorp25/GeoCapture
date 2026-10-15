@@ -14,13 +14,16 @@
   "inventory": {
     "blocks": {
       "total": 4148,
-      "published": 1668,
+      "published": 1674,
       "outside": 2254,
       "unsupported_for_vehicular_lookup": 31,
-      "requiring_evidence": 195,
+      "requiring_evidence": 189,
       "original_release_pending": 226,
       "new_source_verified_unsupported_class0": 8,
-      "dispositionEvidence": "docs/phase4-verified-unsupported-class0-freeways-20261015.json"
+      "dispositionEvidence": "docs/phase4-verified-unsupported-class0-freeways-20261015.json",
+      "published_before_pending_review": 1668,
+      "newly_verified_publishable_from_pending": 6,
+      "source_disambiguation_evidence": "docs/phase4-six-atgrade-tunnel-reviews-20261015.json"
     },
     "features": {
       "total": 10097,
