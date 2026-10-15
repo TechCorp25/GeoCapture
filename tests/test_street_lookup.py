@@ -173,9 +173,38 @@ class NetworkTests(unittest.TestCase):
             result = streets.road_network(0, 0)
         self.assertEqual(result, block())
         first, second = [call.args[0] for call in fetch.call_args_list]
-        self.assertEqual(first.get_method(), "POST")
+        self.assertEqual(first.get_method(), "GET")
         self.assertEqual(second.get_method(), "GET")
-        self.assertEqual(first.data.decode(), second.full_url.split("?", 1)[1])
+        self.assertEqual(first.full_url.split("?", 1)[1], second.full_url.split("?", 1)[1])
+        self.assertTrue(all(call.kwargs["timeout"] == 12 for call in fetch.call_args_list))
+
+    def test_all_provider_outage_recovers_without_two_minute_lockout(self):
+        with patch.object(streets.time, "monotonic", return_value=100), \
+             patch.object(streets, "fetch_json", side_effect=streets.LookupUnavailable("failed")) as fetch:
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.road_network(0, 0)
+            self.assertEqual(fetch.call_count, 2)
+            self.assertTrue(all(deadline == 110 for deadline in streets._provider_backoff.values()))
+        with patch.object(streets.time, "monotonic", return_value=105), \
+             patch.object(streets, "fetch_json") as fetch:
+            with self.assertRaises(streets.LookupUnavailable):
+                streets.road_network(0, 0)
+            fetch.assert_not_called()
+            self.assertTrue(all(deadline == 110 for deadline in streets._provider_backoff.values()))
+        with patch.object(streets.time, "monotonic", return_value=111), \
+             patch.object(streets, "fetch_json", return_value={"elements": block()}) as fetch:
+            self.assertEqual(streets.road_network(0, 0), block())
+            self.assertEqual(fetch.call_count, 1)
+
+    def test_primary_get_keeps_locality_query_and_existing_endpoint_parameters(self):
+        with patch.dict(os.environ, {"OVERPASS_API_URL": "https://primary.example/api?mode=test"}), \
+             patch.object(streets, "fetch_json", return_value={"elements": block()}) as fetch:
+            streets.road_network(0, 0, include_locality=True)
+        request = fetch.call_args.args[0]
+        self.assertIsNone(request.data)
+        params = parse_qs(request.full_url.split("?", 1)[1])
+        self.assertEqual(params["mode"], ["test"])
+        self.assertIn("is_in(0.0000000,0.0000000)", params["data"][0])
 
     def test_partial_primary_retries_and_exhausted_providers_fail(self):
         with patch.object(streets, "fetch_json", side_effect=[{"remark": "timeout"}, {"elements": block()}]):
@@ -224,7 +253,7 @@ class NetworkTests(unittest.TestCase):
         with patch.object(streets, "fetch_json", return_value={"elements": []}) as fetch:
             streets.road_network(-37.8, 144.9)
         request = fetch.call_args.args[0]
-        query = parse_qs(request.data.decode())["data"][0]
+        query = parse_qs(request.full_url.split("?", 1)[1])["data"][0]
         self.assertIn("node(w.roads)(around:800,-37.8000000,144.9000000)", query)
         self.assertIn("residential", query)
         self.assertNotIn("footway", query)

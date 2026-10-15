@@ -54,8 +54,8 @@ when its key is configured, Google. There is no background location watching,
 peer sharing, or continuous upload. The GPS watcher closes when sampling finishes.
 The lookup endpoint uses POST so coordinates are absent from request URLs, returns
 `Cache-Control: no-store`, and is excluded from the service-worker cache. No lookup
-coordinates or raw provider responses are saved by the backend. The fallback uses
-HTTPS GET upstream, so its provider receives the query in the URL; application logs
+coordinates or raw provider responses are saved by the backend. Both road providers use
+HTTPS GET upstream, so each provider receives the query in the URL; application logs
 do not include that URL. The default fallback is the VK Maps global OSM instance. Upstream providers
 have their own request-handling policies.
 
@@ -217,3 +217,5 @@ continues using GPS with a concise warning. Hints do not substitute for GPS or
 select a block within a suburb. Manual entries remain editable and are preserved;
 changing locality clears only untouched automatic street/boundary suggestions
 before capture and discards any pending lookup response.
+
+Provider recovery: both Overpass requests use HTTPS GET with a 12-second socket timeout per attempt. Socket timeouts are not an end-to-end deadline. A failed primary is skipped for 120 seconds when the fallback works; if both fail, retry is allowed after 10 seconds without repeated retries extending that pause. Locality validation and road topology resolution are unchanged.
