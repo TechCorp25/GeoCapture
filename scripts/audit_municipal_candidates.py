@@ -15,6 +15,7 @@ from pathlib import Path
 
 BOUNDS = (144.87, -37.835, 144.945, -37.785)
 VALID_CLASSES = {3, 4, 5}
+EXTENDED_VEHICULAR_CLASSES = {2, 3, 4, 5, 6}  # Official arterial and minor-access road classes
 MIN_LENGTH_METRES = 12
 
 
@@ -88,7 +89,7 @@ def graph_features(source):
     return by_pfi, nodes
 
 
-def audit_one(candidate, by_pfi, nodes, boundary, bbox):
+def audit_one(candidate, by_pfi, nodes, boundary, bbox, valid_classes=VALID_CLASSES):
     props = candidate.get('properties') or {}
     ids = props.get('vicmapPFIs') or []
     coords = (candidate.get('geometry') or {}).get('coordinates') or []
@@ -117,7 +118,7 @@ def audit_one(candidate, by_pfi, nodes, boundary, bbox):
                 or norm(original.get('road_status')) != 'O'
                 or str(original.get('vehicular_access')) != '1'
                 or original.get('structure_name')
-                or original.get('class_code') not in VALID_CLASSES):
+                or original.get('class_code') not in valid_classes):
             return 'PENDING', 'source_road_class_or_access_requires_review'
         if original.get('from_ufi') in (None, 0, '0') or original.get('to_ufi') in (None, 0, '0'):
             return 'PENDING', 'missing_source_network_ufi'
@@ -178,13 +179,13 @@ def audit_one(candidate, by_pfi, nodes, boundary, bbox):
     return 'ELIGIBLE', 'independently_confirmed_source_ufi_geometry_and_lga'
 
 
-def audit(source, candidates, boundary=None, bbox=BOUNDS):
+def audit(source, candidates, boundary=None, bbox=BOUNDS, valid_classes=VALID_CLASSES):
     by_pfi, nodes = graph_features(source)
     dispositions = []
     verified = []
     counts = Counter()
     for idx, feature in enumerate(candidates.get('features', [])):
-        state, reason = audit_one(feature, by_pfi, nodes, boundary, bbox)
+        state, reason = audit_one(feature, by_pfi, nodes, boundary, bbox, valid_classes=valid_classes)
         counts[state] += 1
         counts[state + ':' + reason] += 1
         props = feature.get('properties') or {}
@@ -214,6 +215,8 @@ def main():
     parser.add_argument('--boundary')
     parser.add_argument('--boundary-manifest')
     parser.add_argument('--bbox', nargs=4, type=float, default=list(BOUNDS))
+    parser.add_argument("--include-arterial-and-minor-access", action="store_true",
+                        help="Phase 4 official Vicmap class 2 arterial and class 6 minor-access roads; never permits highways, freeways or trails")
     args = parser.parse_args()
     if bool(args.boundary) != bool(args.boundary_manifest):
         parser.error('--boundary and --boundary-manifest must be provided together')
@@ -227,8 +230,10 @@ def main():
         raw = Path(args.boundary).read_bytes()
         boundary = validate_boundary(json.loads(raw), read_json(args.boundary_manifest), raw)
     bbox = args.bbox if args.bbox != list(BOUNDS) else source_manifest.get('bboxWGS84', args.bbox)
+    valid_classes = EXTENDED_VEHICULAR_CLASSES if args.include_arterial_and_minor_access else VALID_CLASSES
     dispositions, verified, report = audit(read_json(args.source), read_json(args.candidates),
-                                           boundary, bbox)
+                                           boundary, bbox, valid_classes=valid_classes)
+    report["eligibleVicmapClassCodes"] = sorted(valid_classes)
     for path, document in ((args.dispositions, dispositions), (args.verified, verified), (args.report, report)):
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)

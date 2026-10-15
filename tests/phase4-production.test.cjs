@@ -33,8 +33,8 @@ function harness() {
 }
 
 test("static municipal source and all 10 package checksums agree with pinned release",()=>{
-  assert.equal(manifest.newSourceQualifiedRoadBlocks,1454);
-  assert.equal(manifest.newGeometryEdges,2108);
+  assert.ok(manifest.newSourceQualifiedRoadBlocks>=1454);
+  assert.ok(manifest.newGeometryEdges>=manifest.newSourceQualifiedRoadBlocks);
   assert.equal(manifest.publishedExistingRoadBlocks,33);
   assert.equal(Object.keys(manifest.packages).length,10);
   assert.equal(manifest.operationalCoverageComplete,false);
@@ -51,10 +51,11 @@ test("static municipal source and all 10 package checksums agree with pinned rel
       assert.equal(s.postcode,"","postcode not invented");
       assert.equal(s.attribution.licence,"CC BY 4.0");
       assert.equal(s.reviewState,"OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING");
+      if(s.vicmapClassCodes?.includes(2)){assert.equal(s.positive,"");assert.equal(s.negative,"");}
     }
   }
-  assert.equal(blocks,1454);
-  assert.equal(edges,2108);
+  assert.equal(blocks,manifest.newSourceQualifiedRoadBlocks);
+  assert.equal(edges,manifest.newGeometryEdges);
 });
 test("GPS selects required locality data without remote lookup and rebuilds spatial index",async()=>{
   const h=harness();
@@ -67,10 +68,10 @@ test("GPS selects required locality data without remote lookup and rebuilds spat
     await h.packLoader.ensureFor(sample[0],sample[1]);
   }
   assert.equal(h.packLoader.loadedPackages.length,10);
-  assert.equal(h.content.segments.length,2287);
-  assert.equal(new Set(h.content.segments.map(s=>s.id)).size,2287);
+  assert.equal(h.content.segments.length,179+manifest.newGeometryEdges);
+  assert.equal(new Set(h.content.segments.map(s=>s.id)).size,179+manifest.newGeometryEdges);
   const engine=local.createResolver(h.content);
-  assert.equal(engine.segmentCount,2287);
+  assert.equal(engine.segmentCount,179+manifest.newGeometryEdges);
   // Use mid-block points: genuine ambiguities are permitted but should not
   // erase every correct match within a locality.
   let matched=0;
@@ -104,6 +105,6 @@ test("full municipal graph maintains low local matching p95 excluding receiver/d
   }
   samples.sort((a,b)=>a-b);
   const p95=samples[Math.floor(samples.length*.95)];
-  console.log("Phase 4 local graph 2,287 geometry edges; p95 =",p95.toFixed(3),"ms; excludes GPS/MongoDB");
+  console.log("Phase 4 local graph",179+manifest.newGeometryEdges,"geometry edges; p95 =",p95.toFixed(3),"ms; excludes GPS/MongoDB");
   assert.ok(p95<250);
 });

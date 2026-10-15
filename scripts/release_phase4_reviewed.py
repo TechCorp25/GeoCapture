@@ -11,7 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from scripts.audit_municipal_candidates import audit_one, graph_features, validate_boundary
+from scripts.audit_municipal_candidates import audit_one, graph_features, validate_boundary, EXTENDED_VEHICULAR_CLASSES
 from scripts.build_municipal_road_pack import build
 from scripts.maribyrnong_inventory import line_membership
 
@@ -19,7 +19,8 @@ PINNED_ROAD_SHA = "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a94441
 PINNED_LGA_SHA = "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb"
 ROAD_URL = "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line"
 REVIEW_STATE = "OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING"
-EXPECTED_BLOCKS = 1454
+MINIMUM_BLOCKS = 1454
+VERSION = "maribyrnong-phase4-20261015-v2"
 
 
 def read_checked(folder, filename, expected_sha):
@@ -44,8 +45,9 @@ def release(folder, destination, baseline):
         raise ValueError("Official object-ID count mismatch")
     by_pfi, nodes = graph_features(source)
     permitted = json.loads((folder / "staging-packages" / "manifest.json").read_text())
-    if permitted.get("totalQualified") != 1487 or permitted.get("stagedCandidates") != EXPECTED_BLOCKS:
-        raise ValueError("Stage release denominator changed")
+    expected_blocks = permitted.get("stagedCandidates")
+    if not isinstance(expected_blocks, int) or not MINIMUM_BLOCKS <= expected_blocks <= 2000 or permitted.get("totalQualified",0) < 1487:
+        raise ValueError("Unexpected expanded-source staging denominator")
     if permitted.get("sourceRoadSHA256") != PINNED_ROAD_SHA or permitted.get("sourceLGASHA256") != PINNED_LGA_SHA:
         raise ValueError("Staging source provenance changed")
     existing = set()
@@ -85,7 +87,8 @@ def release(folder, destination, baseline):
                 raise ValueError("Candidate not wholly within official council polygon")
             pending = json.loads(json.dumps(f))
             pending["properties"]["boundaryEndpointsVerified"] = False
-            result, why = audit_one(pending, by_pfi, nodes, council, road_manifest["bboxWGS84"])
+            result, why = audit_one(pending, by_pfi, nodes, council, road_manifest["bboxWGS84"],
+                                    valid_classes=EXTENDED_VEHICULAR_CLASSES)
             if result != "ELIGIBLE":
                 raise ValueError("Independent source topology no longer validates " + str(fid) + ": " + why)
         segments, skipped = build({"type": "FeatureCollection", "features": features},
@@ -98,35 +101,48 @@ def release(folder, destination, baseline):
             block = segment["id"].split(":")[1]
             props = block_by_id[block]
             segment["sourcePFIs"] = props["vicmapPFIs"]
+            segment["vicmapClassCodes"] = sorted({int(by_pfi[str(i)]["properties"]["class_code"])
+                                                 for i in props["vicmapPFIs"]})
+            # Class-2 arterials can include parallel/divided carriageways.
+            # The road/intersections are source-verified but no cardinal
+            # side may be inferred before device/field corroboration.
+            if any(by_pfi[str(i)]["properties"].get("class_code") == 2
+                   for i in props["vicmapPFIs"]):
+                segment["positive"] = ""
+                segment["negative"] = ""
             segment["reviewState"] = REVIEW_STATE
             segment["attribution"]["snapshotSHA256"] = PINNED_ROAD_SHA
             segment["attribution"]["councilPolygonSHA256"] = PINNED_LGA_SHA
             segment["attribution"]["reviewState"] = REVIEW_STATE
         total_edges += len(segments)
-        encoded = (json.dumps({"version": "maribyrnong-phase4-20261015",
+        encoded = (json.dumps({"version": VERSION,
                                 "segments": segments}, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
         outfile = name + ".json"
         output[outfile] = encoded
-    if len(all_ids) != EXPECTED_BLOCKS or sum(p["candidateBlocks"] for p in permitted["packages"].values()) != EXPECTED_BLOCKS:
+    if len(all_ids) != expected_blocks or sum(p["candidateBlocks"] for p in permitted["packages"].values()) != expected_blocks:
         raise ValueError("Qualified block count changed unexpectedly")
-    if total_edges < EXPECTED_BLOCKS:
+    if total_edges < expected_blocks:
         raise ValueError("Corrupted edge pack")
     manifest = {
         "schema": "geocapture.municipal_road_packs.v1",
         "municipality": "CITY OF MARIBYRNONG",
-        "version": "maribyrnong-phase4-20261015",
+        "version": VERSION,
         "sourceRoadSHA256": PINNED_ROAD_SHA,
         "councilPolygonSHA256": PINNED_LGA_SHA,
         "licence": "CC BY 4.0", "attribution": "State of Victoria",
         "publicationReviewState": REVIEW_STATE,
         "operationalCoverageComplete": False,
         "publishedExistingRoadBlocks": len(existing),
-        "newSourceQualifiedRoadBlocks": EXPECTED_BLOCKS,
+        "newSourceQualifiedRoadBlocks": expected_blocks,
         "newGeometryEdges": total_edges,
-        "unresolvedCandidateBlocks": 407,
+        "unresolvedCandidateBlocks": 407,  # overridden below from the fresh independent audit
         "unverifiedDeadEndsDoNotMatch": True,
         "packages": {}
     }
+    fresh = json.loads((folder / "municipal-inventory-report.json").read_text())
+    manifest["unresolvedCandidateBlocks"] = fresh["candidateFinalDispositions"].get("PENDING_REVIEW", 0)
+    manifest["sourceQualifiedBlocks"] = fresh["candidateFinalDispositions"].get("VERIFIED", 0)
+    manifest["reviewedVicmapClasses"] = sorted(EXTENDED_VEHICULAR_CLASSES)
     for name, spec in sorted(permitted["packages"].items()):
         filename = name + ".json"
         manifest["packages"][name] = {

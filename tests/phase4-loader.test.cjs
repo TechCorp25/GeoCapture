@@ -15,12 +15,12 @@ const road = {
     licence:"CC BY 4.0",
     snapshotSHA256:"3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb"}
 };
-const packJSON = JSON.stringify({version:"maribyrnong-phase4-20261015",segments:[road]});
+const packJSON = JSON.stringify({version:"maribyrnong-phase4-20261015-v2",segments:[road]});
 const packRaw = Buffer.from(packJSON);
 const packageNames = ["braybrook","footscray","kingsville","maidstone","maribyrnong",
   "seddon","shared-localities","tottenham","west-footscray","yarraville"];
 const manifest = {
-  schema:"geocapture.municipal_road_packs.v1",version:"maribyrnong-phase4-20261015",
+  schema:"geocapture.municipal_road_packs.v1",version:"maribyrnong-phase4-20261015-v2",
   sourceRoadSHA256:"3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
   councilPolygonSHA256:"d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
   publicationReviewState:"OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING",

@@ -1,7 +1,7 @@
 {
   "schema": "geocapture.municipal_road_packs.v1",
   "municipality": "CITY OF MARIBYRNONG",
-  "version": "maribyrnong-phase4-20261015",
+  "version": "maribyrnong-phase4-20261015-v2",
   "sourceRoadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
   "councilPolygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
   "licence": "CC BY 4.0",
@@ -9,9 +9,9 @@
   "publicationReviewState": "OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING",
   "operationalCoverageComplete": false,
   "publishedExistingRoadBlocks": 33,
-  "newSourceQualifiedRoadBlocks": 1454,
-  "newGeometryEdges": 2108,
-  "unresolvedCandidateBlocks": 407,
+  "newSourceQualifiedRoadBlocks": 1635,
+  "newGeometryEdges": 2405,
+  "unresolvedCandidateBlocks": 226,
   "unverifiedDeadEndsDoNotMatch": true,
   "packages": {
     "braybrook": {
@@ -22,19 +22,19 @@
         144.86575200100003,
         -37.773625820086174
       ],
-      "roadBlocks": 195,
-      "sha256": "92d737d31dddeec609ebbfe527673fe5827163ff77bd0e1e8eb8d518acdb2fcb"
+      "roadBlocks": 207,
+      "sha256": "32006aa791f4c8d22ba05579826a68f5aba739ba85fe0e8ecb15f1a25198ea32"
     },
     "footscray": {
       "file": "./municipal-data/footscray.json",
       "boundsWGS84": [
         144.87940080300007,
-        -37.811636717085854,
+        -37.81204204508586,
         144.907945734,
         -37.78740444908606
       ],
-      "roadBlocks": 199,
-      "sha256": "0b97426b6b847a6571dc1ac3a53d2697a4afe57012825ac106a74ca596c4e14f"
+      "roadBlocks": 224,
+      "sha256": "7fb0ac53c18f9c12eff9f0e80232555ce65b04beb2e0ff3d8d5a357a866da46d"
     },
     "kingsville": {
       "file": "./municipal-data/kingsville.json",
@@ -44,8 +44,8 @@
         144.88531282500003,
         -37.80298195708597
       ],
-      "roadBlocks": 29,
-      "sha256": "63dd0e92e6675365b6a53e32450352b7abbb3b46f56119d042accd47e7aca156"
+      "roadBlocks": 31,
+      "sha256": "c1b9026b0bfd78739663dc4a229e4e96b0e3fa92e250e52cb107fb14de1b6f58"
     },
     "maidstone": {
       "file": "./municipal-data/maidstone.json",
@@ -55,8 +55,8 @@
         144.88512396300007,
         -37.774610620086186
       ],
-      "roadBlocks": 168,
-      "sha256": "343030112fed42f407f4f69d35a27639444cf03e27ea7c712970148482cd1c9f"
+      "roadBlocks": 196,
+      "sha256": "eb0989dee8c38968274f84b552c4137e7842b8306ada18280a06300889c28d79"
     },
     "maribyrnong": {
       "file": "./municipal-data/maribyrnong.json",
@@ -66,8 +66,8 @@
         144.90154780700004,
         -37.762342613086304
       ],
-      "roadBlocks": 233,
-      "sha256": "ef2c771f04c8d73a314bcfc12aa60aba6cd76345398af15cb57226f1d6e50c82"
+      "roadBlocks": 248,
+      "sha256": "34682f1027fcf93dc05f11928b98f9f6256d1944b0e84c12cfcb9c641e66934f"
     },
     "seddon": {
       "file": "./municipal-data/seddon.json",
@@ -78,51 +78,59 @@
         -37.80224270108596
       ],
       "roadBlocks": 107,
-      "sha256": "266c8207a4f4327a585b34e87e71a615fd4bd9f0139d2dcc48ec180ccaa41549"
+      "sha256": "cf28576394b7cb781aa99f55cd9cbe3061348ff96927cec523f1bbbe87ad5276"
     },
     "shared-localities": {
       "file": "./municipal-data/shared-localities.json",
       "boundsWGS84": [
-        144.85991472400008,
-        -37.813486613085864,
+        144.84975467100003,
+        -37.81381681108588,
         144.90023695500008,
         -37.77481461708616
       ],
-      "roadBlocks": 87,
-      "sha256": "ffb9f922b064745641a7498e081db26f8a05ec64e404928c1c337b36fc4d75b0"
+      "roadBlocks": 113,
+      "sha256": "6915e99732462cf6c999bb2bbf3f13d56f428fbc639c5e64b329ab090ed9031a"
     },
     "tottenham": {
       "file": "./municipal-data/tottenham.json",
       "boundsWGS84": [
         144.84939100200006,
         -37.814098556085874,
-        144.85867602200005,
+        144.8604326210001,
         -37.79813552208602
       ],
-      "roadBlocks": 6,
-      "sha256": "be1e88fcf94fdff89511c6f0e58812f4f6dcdbab7cd590b38eacede409952078"
+      "roadBlocks": 9,
+      "sha256": "b55b1956941286edef331cedb7eb668da0001d07f7707c489be42c34ae40b371"
     },
     "west-footscray": {
       "file": "./municipal-data/west-footscray.json",
       "boundsWGS84": [
         144.8601256060001,
         -37.813486613085864,
-        144.88169136800002,
+        144.88276422600006,
         -37.789879797086066
       ],
-      "roadBlocks": 146,
-      "sha256": "d25cca7307906bab61ea1df6fb52a6f4624e2a6c32e4e541a474c082d2b567fb"
+      "roadBlocks": 170,
+      "sha256": "c32702c37abb0ba9716eee11d1befecc1c412c54e5eca5ccd85b9b5feb262991"
     },
     "yarraville": {
       "file": "./municipal-data/yarraville.json",
       "boundsWGS84": [
-        144.8620519100001,
+        144.8605530420001,
         -37.82439968308579,
-        144.8989806190001,
+        144.8997769980001,
         -37.80991912308591
       ],
-      "roadBlocks": 284,
-      "sha256": "c1c1debce0083c524bba29fb09a07b5883124002cd3d1f618fed1a3f004113ed"
+      "roadBlocks": 330,
+      "sha256": "36000cc3a395c8299d7ebd2f90182dd64d74c0f33d9ed4f14a9b4b7ece257206"
     }
-  }
+  },
+  "sourceQualifiedBlocks": 1668,
+  "reviewedVicmapClasses": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ]
 }

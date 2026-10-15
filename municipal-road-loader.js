@@ -7,7 +7,7 @@
   const ROAD_SHA = "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb";
   const LGA_SHA = "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb";
   const MANIFEST_URL = "./municipal-data/manifest.json";
-  const VERSION = "maribyrnong-phase4-20261015";
+  const VERSION = "maribyrnong-phase4-20261015-v2";
 
   function bboxContains(bbox, lat, lon, metres = 100) {
     if (!Array.isArray(bbox) || bbox.length !== 4) return false;
