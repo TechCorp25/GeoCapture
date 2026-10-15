@@ -1,0 +1,64 @@
+name: GeoCapture Phase 3 independent municipal source audit
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feature/phase3-*"
+    paths:
+      - "scripts/audit_municipal_candidates.py"
+      - "scripts/fetch_vicmap_lga.py"
+      - "tests/test_municipal_candidate_audit.py"
+      - ".github/workflows/phase3-municipal-audit.yml"
+permissions:
+  contents: read
+jobs:
+  road-network-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run all Python and JavaScript regressions
+        run: |
+          python -m unittest discover -s tests -v
+          node --test tests/*.test.cjs
+      - name: Acquire official buffered Footscray TR_ROAD source
+        run: |
+          mkdir -p work/phase3
+          python scripts/fetch_vicmap_roads.py \
+            --output work/phase3/source.geojson \
+            --manifest work/phase3/source-manifest.json \
+            --bbox 144.87 -37.835 144.945 -37.785
+      - name: Acquire official Maribyrnong LGA_POLYGON
+        run: |
+          python scripts/fetch_vicmap_lga.py \
+            --output work/phase3/maribyrnong-lga.geojson \
+            --manifest work/phase3/maribyrnong-lga-manifest.json
+      - name: Derive review candidates from official source
+        run: |
+          python scripts/review_vicmap_topology.py \
+            --input work/phase3/source.geojson \
+            --output work/phase3/candidates.geojson \
+            --report work/phase3/topology-audit.json \
+            --bbox 144.87 -37.835 144.945 -37.785
+      - name: Independently audit source geometry, connectivity and LGA membership
+        run: |
+          python scripts/audit_municipal_candidates.py \
+            --source work/phase3/source.geojson \
+            --source-manifest work/phase3/source-manifest.json \
+            --candidates work/phase3/candidates.geojson \
+            --boundary work/phase3/maribyrnong-lga.geojson \
+            --boundary-manifest work/phase3/maribyrnong-lga-manifest.json \
+            --dispositions work/phase3/candidate-dispositions.json \
+            --verified work/phase3/eligible-for-release-review.geojson \
+            --report work/phase3/independent-audit.json
+      - name: Preserve evidence for human release review (NOT published)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maribyrnong-phase3-offline-audit
+          path: work/phase3/
+          if-no-files-found: warn
+          retention-days: 30
