@@ -1,7 +1,7 @@
 {
   "schema": "geocapture.municipal_road_packs.v1",
   "municipality": "CITY OF MARIBYRNONG",
-  "version": "maribyrnong-phase4-20261015-v2",
+  "version": "maribyrnong-phase4-20261015-v3",
   "sourceRoadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
   "councilPolygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
   "licence": "CC BY 4.0",
@@ -9,9 +9,9 @@
   "publicationReviewState": "OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING",
   "operationalCoverageComplete": false,
   "publishedExistingRoadBlocks": 33,
-  "newSourceQualifiedRoadBlocks": 1635,
-  "newGeometryEdges": 2405,
-  "unresolvedCandidateBlocks": 226,
+  "newSourceQualifiedRoadBlocks": 1641,
+  "newGeometryEdges": 2414,
+  "unresolvedCandidateBlocks": 189,
   "unverifiedDeadEndsDoNotMatch": true,
   "packages": {
     "braybrook": {
@@ -23,7 +23,7 @@
         -37.773625820086174
       ],
       "roadBlocks": 207,
-      "sha256": "32006aa791f4c8d22ba05579826a68f5aba739ba85fe0e8ecb15f1a25198ea32"
+      "sha256": "9ebfd5d69f55c72b4c679a6484ea3364eab3dbeabc636fb104c9b349e0cff5ed"
     },
     "footscray": {
       "file": "./municipal-data/footscray.json",
@@ -34,7 +34,7 @@
         -37.78740444908606
       ],
       "roadBlocks": 224,
-      "sha256": "7fb0ac53c18f9c12eff9f0e80232555ce65b04beb2e0ff3d8d5a357a866da46d"
+      "sha256": "dd17509e4b0a580e602b983ccbed159db689adf75e64ec384ff99b430133d7bf"
     },
     "kingsville": {
       "file": "./municipal-data/kingsville.json",
@@ -45,7 +45,7 @@
         -37.80298195708597
       ],
       "roadBlocks": 31,
-      "sha256": "c1b9026b0bfd78739663dc4a229e4e96b0e3fa92e250e52cb107fb14de1b6f58"
+      "sha256": "f28a80c32228bad585ae4ed896f916bd5105e1bebc8543e3bd182e04df657825"
     },
     "maidstone": {
       "file": "./municipal-data/maidstone.json",
@@ -56,7 +56,7 @@
         -37.774610620086186
       ],
       "roadBlocks": 196,
-      "sha256": "eb0989dee8c38968274f84b552c4137e7842b8306ada18280a06300889c28d79"
+      "sha256": "3db4ef30013c8d3c1e887afb544161bf86297e2d538bca8a5054d245f2ca2ca3"
     },
     "maribyrnong": {
       "file": "./municipal-data/maribyrnong.json",
@@ -67,7 +67,7 @@
         -37.762342613086304
       ],
       "roadBlocks": 248,
-      "sha256": "34682f1027fcf93dc05f11928b98f9f6256d1944b0e84c12cfcb9c641e66934f"
+      "sha256": "b32e2fb1523743e74fb594e7582141d7de5575154d0aeb578022597b7855b220"
     },
     "seddon": {
       "file": "./municipal-data/seddon.json",
@@ -78,7 +78,7 @@
         -37.80224270108596
       ],
       "roadBlocks": 107,
-      "sha256": "cf28576394b7cb781aa99f55cd9cbe3061348ff96927cec523f1bbbe87ad5276"
+      "sha256": "ba532af747fc6abba29e2a59f952c516cb87527a0cd68e47e167f064ea1d9b08"
     },
     "shared-localities": {
       "file": "./municipal-data/shared-localities.json",
@@ -89,7 +89,7 @@
         -37.77481461708616
       ],
       "roadBlocks": 113,
-      "sha256": "6915e99732462cf6c999bb2bbf3f13d56f428fbc639c5e64b329ab090ed9031a"
+      "sha256": "3cf8f35b607f2dd99525bfe0f498d82dfb200a1d7f500de61bb8933e261d9062"
     },
     "tottenham": {
       "file": "./municipal-data/tottenham.json",
@@ -100,7 +100,7 @@
         -37.79813552208602
       ],
       "roadBlocks": 9,
-      "sha256": "b55b1956941286edef331cedb7eb668da0001d07f7707c489be42c34ae40b371"
+      "sha256": "e1c002d1fab9c779a83b7aa3bb24da3dc961f03749b00898dc832d31d26fb9c7"
     },
     "west-footscray": {
       "file": "./municipal-data/west-footscray.json",
@@ -111,7 +111,7 @@
         -37.789879797086066
       ],
       "roadBlocks": 170,
-      "sha256": "c32702c37abb0ba9716eee11d1befecc1c412c54e5eca5ccd85b9b5feb262991"
+      "sha256": "645bd19766ae67a6472c62c17cf1780061bf8ea0ca3b7111d73bb53fa78debf6"
     },
     "yarraville": {
       "file": "./municipal-data/yarraville.json",
@@ -121,11 +121,11 @@
         144.8997769980001,
         -37.80991912308591
       ],
-      "roadBlocks": 330,
-      "sha256": "36000cc3a395c8299d7ebd2f90182dd64d74c0f33d9ed4f14a9b4b7ece257206"
+      "roadBlocks": 336,
+      "sha256": "f4e7af03d52f74bea14ebea07818c541db5162e272c1c9cc44a88299b2805ed0"
     }
   },
-  "sourceQualifiedBlocks": 1668,
+  "sourceQualifiedBlocks": 1674,
   "reviewedVicmapClasses": [
     2,
     3,
