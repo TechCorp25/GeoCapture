@@ -16,7 +16,11 @@ URL = LAYER + '/query'
 
 
 def acquire(fetch=None):
-    params = {'where': "LGA_NAME = 'MARIBYRNONG'", 'outFields': '*',
+    # Identify a containing official LGA from the independently reviewed
+    # Talbot Street Footscray point; do not rely on jurisdiction-name syntax.
+    params = {'where': '1=1', 'geometry': '144.9035,-37.80205',
+              'geometryType': 'esriGeometryPoint', 'inSR': 4326,
+              'spatialRel': 'esriSpatialRelIntersects', 'outFields': '*',
               'returnGeometry': 'true', 'outSR': 4326, 'f': 'geojson'}
     url = URL + '?' + urllib.parse.urlencode(params)
     if fetch is None:
@@ -32,12 +36,13 @@ def acquire(fetch=None):
     data = fetch(url)
     doc = json.loads(data)
     if doc.get('error') or doc.get('type') != 'FeatureCollection' or len(doc.get('features', [])) != 1:
-        raise ValueError('Official layer did not return exactly one Maribyrnong polygon')
+        raise ValueError('Official layer did not return one containing LGA polygon; result: ' + str({k: doc.get(k) for k in ('type','error','features')} )[:450])
     feature = doc['features'][0]
     if (feature.get('geometry') or {}).get('type') not in ('Polygon', 'MultiPolygon'):
         raise ValueError('Expected polygon or multipolygon')
     props = feature.get('properties') or {}
-    if not any(str(value).upper().strip() == 'MARIBYRNONG'
+    if not any(str(value).upper().strip() in ('MARIBYRNONG', 'MARIBYRNONG (C)', 'CITY OF MARIBYRNONG',
+                                                   'MARIBYRNONG CITY COUNCIL')
                for key, value in props.items() if 'name' in key.lower()):
         raise ValueError('Unexpected municipality name from Vicmap Admin')
     payload = (json.dumps(doc, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8')
