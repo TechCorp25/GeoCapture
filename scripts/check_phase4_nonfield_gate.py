@@ -53,10 +53,13 @@ def audit(repo=ROOT, readiness=None):
                                   "unsupported_for_vehicular_lookup", "pending_review")) != features["total"]:
         integrity.append("source feature disposition counts do not reconcile")
     if blocks["original_release_pending"] != (blocks["unsupported_for_vehicular_lookup"]
-                                                + blocks["requiring_evidence"]):
+                                                + blocks["requiring_evidence"]
+                                                + blocks["published"] - blocks.get("published_before_pending_review", 0)):
         integrity.append("review overlay is inconsistent with published manifest snapshot")
-    if manifest["unresolvedCandidateBlocks"] != blocks["original_release_pending"]:
+    if manifest["unresolvedCandidateBlocks"] != blocks["requiring_evidence"]:
         integrity.append("municipal manifest and archived pending candidate count disagree")
+    if blocks.get("published_before_pending_review") != 1668 or blocks["published"] < 1668:
+        integrity.append("initial source qualified publication baseline is not preserved")
     if manifest["sourceQualifiedBlocks"] != blocks["published"]:
         integrity.append("reviewed municipal road block count differs from manifest")
     if manifest["sourceRoadSHA256"] != readiness["source"]["roadSHA256"]:

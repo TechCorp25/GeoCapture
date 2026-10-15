@@ -52,7 +52,7 @@ class NonFieldGateTests(unittest.TestCase):
         self.assertEqual(len(entries), 8)
         self.assertEqual(len({row["candidateId"] for row in entries}), 8)
         self.assertEqual(self.record["inventory"]["blocks"]["unsupported_for_vehicular_lookup"], 23 + len(entries))
-        self.assertEqual(self.record["inventory"]["blocks"]["requiring_evidence"], 226 - 23 - len(entries))
+        self.assertEqual(self.record["inventory"]["blocks"]["requiring_evidence"], 226 - 23 - len(entries) - 6)
         self.assertEqual({row["disposition"] for row in entries}, {"VERIFIED_UNSUPPORTED"})
         self.assertEqual({row["physicalVerificationStatus"] for row in entries}, {"NOT_PERFORMED"})
         self.assertTrue(all(row["publicationEligible"] is False for row in entries))
@@ -65,6 +65,27 @@ class NonFieldGateTests(unittest.TestCase):
             self.assertEqual(row["roadStatusCodes"], ["O"] * n)
             self.assertTrue("WEST GATE" in row["street"])
 
+
+    def test_six_source_only_tunnel_junction_disambiguations_match_published_yarraville(self):
+        source = json.loads((ROOT / "docs/phase4-six-atgrade-tunnel-reviews-20261015.json").read_text())
+        entries = source["records"]
+        self.assertEqual(len(entries), 6)
+        ids = {row["candidateId"] for row in entries}
+        self.assertEqual(len(ids), 6)
+        self.assertEqual({row["outcome"] for row in entries}, {"VERIFIED_PUBLISHABLE"})
+        self.assertTrue(all(row["publicationEligible"] and not row["physicalFieldVerified"] for row in entries))
+        pack = json.loads((ROOT / "municipal-data/yarraville.json").read_text())
+        matching = [edge for edge in pack["segments"] if edge["id"].split(":")[1] in ids]
+        self.assertEqual(len(matching), 9)
+        for row in entries:
+            matched = [edge for edge in matching if edge["id"].split(":")[1] == row["candidateId"]]
+            self.assertTrue(matched)
+            self.assertTrue(all(edge["sourcePFIs"] == row["sourcePFIs"] for edge in matched))
+            self.assertTrue(all(edge["street"] == row["street"] for edge in matched))
+            self.assertTrue(all([edge["from"], edge["to"]] == row["between"] for edge in matched))
+            self.assertTrue(all(edge["postcode"] == "" for edge in matched))
+            self.assertTrue(all(0 not in edge["vicmapClassCodes"] for edge in matched))
+            self.assertTrue(any(row["gradeSeparatedTunnelPFIsByEndpoint"]))
 
 if __name__ == "__main__":
     unittest.main()
