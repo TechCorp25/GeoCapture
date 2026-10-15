@@ -1,0 +1,85 @@
+{
+  "schema": "geocapture.phase4.nonfield_readiness.v1",
+  "project": "GeoCapture",
+  "workspace": "CivicMAPS-rebuild",
+  "municipality": "City of Maribyrnong",
+  "updated": "2026-10-15",
+  "policy": "Physical field testing is prohibited until all non-field acceptance requirements are verified, integrated into main and live in production.",
+  "source": {
+    "original": "/CivicMAPS-rebuild/GeoCapture/Maribyrnong/source-evidence/derived-review/GeoCapture_Phase4_Audit_and_Field_Review_20261015.zip",
+    "reviewOverlay": "GeoCapture_Phase4_Field_Review_Overlay_v2_20261015.zip",
+    "roadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
+    "polygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb"
+  },
+  "inventory": {
+    "blocks": {
+      "total": 4148,
+      "published": 1668,
+      "outside": 2254,
+      "unsupported_for_vehicular_lookup": 23,
+      "requiring_evidence": 203,
+      "original_release_pending": 226
+    },
+    "features": {
+      "total": 10097,
+      "published_associations": 1693,
+      "outside": 4669,
+      "unsupported_for_vehicular_lookup": 1238,
+      "pending_review": 2497
+    },
+    "terminals": {
+      "field_verified_dead_ends": 1,
+      "unverified_candidate_endpoints": 318
+    },
+    "conflicting_review_reason_candidates": 13
+  },
+  "checks": {
+    "current_package_integrity": {
+      "status": "verified",
+      "evidence": "tests/phase4-production.test.cjs and SHA-256 checked municipal-data/manifest.json"
+    },
+    "all_source_feature_dispositions": {
+      "status": "pending",
+      "evidence": null
+    },
+    "all_road_block_dispositions": {
+      "status": "pending",
+      "evidence": null
+    },
+    "source_terminal_classification": {
+      "status": "pending",
+      "evidence": null
+    },
+    "loader_boundary_offline_cache_and_recovery": {
+      "status": "pending",
+      "evidence": null
+    },
+    "local_matcher_and_operator_override_regression": {
+      "status": "pending",
+      "evidence": null
+    },
+    "queued_capture_and_nonproduction_mongodb_recovery": {
+      "status": "pending",
+      "evidence": null
+    },
+    "measured_nonfield_performance_p50_p95_worst": {
+      "status": "pending",
+      "evidence": null
+    },
+    "final_regression_ci_and_live_sha_parity": {
+      "status": "pending",
+      "evidence": null
+    }
+  },
+  "fieldTesting": {
+    "authorised": false,
+    "authorisationEvidence": null,
+    "requiredDecision": "All non-field checks verified and available in released application; source cases needing physical inspection explicitly marked as field-only."
+  },
+  "restrictions": {
+    "noUnverifiedIntersections": true,
+    "noUnverifiedDeadEnds": true,
+    "noProductionTestBays": true,
+    "originalEvidencePreserved": true
+  }
+}
