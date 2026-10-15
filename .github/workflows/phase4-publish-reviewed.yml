@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/release_phase4_reviewed.py"
       - "scripts/audit_municipal_candidates.py"
+      - "scripts/audit_municipal_terminals.py"
       - "municipal-road-loader.js"
       - "index.html"
       - "sw.js"
@@ -78,6 +79,17 @@ jobs:
             --output municipal-data \
             --published data/reviewed/maribyrnong-talbot-cowper-dead-end.geojson \
             --published data/reviewed/maribyrnong-footscray-phase3-20261015.geojson
+      - name: Preserve official degree-one municipal road ends as field-review queue (not automatic verified dead ends)
+        run: |
+          python -m scripts.audit_municipal_terminals \
+            --source work/phase4-release-input/roads.geojson \
+            --source-manifest work/phase4-release-input/roads-manifest.json \
+            --boundary work/phase4-release-input/lga.geojson \
+            --boundary-manifest work/phase4-release-input/lga-manifest.json \
+            --published data/reviewed/maribyrnong-talbot-cowper-dead-end.geojson \
+            --published data/reviewed/maribyrnong-footscray-phase3-20261015.geojson \
+            --output work/phase4-release-input/terminal-review-candidates.json \
+            --report work/phase4-release-input/terminal-review-report.json
       - name: Check all independently reviewed blocks and source provenance
         run: |
           python - <<'PY'
@@ -120,5 +132,7 @@ jobs:
             municipal-data/
             work/phase4-release-input/municipal-inventory-report.json
             work/phase4-release-input/candidate-dispositions.json
+            work/phase4-release-input/terminal-review-candidates.json
+            work/phase4-release-input/terminal-review-report.json
           if-no-files-found: warn
           retention-days: 30
