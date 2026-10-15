@@ -9,6 +9,7 @@ on:
       - "scripts/maribyrnong_inventory.py"
       - "scripts/stage_municipal_packs.py"
       - "tests/test_phase4_municipal_inventory.py"
+      - "tests/test_phase4_review_packs.py"
       - ".github/workflows/phase4-municipal-inventory.yml"
 permissions:
   contents: read
