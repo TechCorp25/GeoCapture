@@ -1066,7 +1066,7 @@ $("clearBtn").addEventListener("click", async () => {
 });
 
 window.addEventListener("online", () => {
-  if (localStorage.getItem(PENDING_KEY)) void flushSegmentQueue();
+  if (localStorage.getItem(PENDING_KEY) || localStorage.getItem(SYNC_QUEUE_KEY)) void flushSegmentQueue();
   else if (points.length) void persistSegment("online_retry", "active", false);
 });
 
