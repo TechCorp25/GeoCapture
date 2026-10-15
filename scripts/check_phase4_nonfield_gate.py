@@ -58,7 +58,9 @@ def audit(repo=ROOT, readiness=None):
         integrity.append("review overlay is inconsistent with published manifest snapshot")
     if manifest["unresolvedCandidateBlocks"] != blocks["requiring_evidence"]:
         integrity.append("municipal manifest and archived pending candidate count disagree")
-    if blocks.get("published_before_pending_review") != 1668 or blocks["published"] < 1668:\n        integrity.append("initial source qualified publication baseline is not preserved")\n    if manifest["sourceQualifiedBlocks"] != blocks["published"]:
+    if blocks.get("published_before_pending_review") != 1668 or blocks["published"] < 1668:
+        integrity.append("initial source qualified publication baseline is not preserved")
+    if manifest["sourceQualifiedBlocks"] != blocks["published"]:
         integrity.append("reviewed municipal road block count differs from manifest")
     if manifest["sourceRoadSHA256"] != readiness["source"]["roadSHA256"]:
         integrity.append("official road source SHA drift")
