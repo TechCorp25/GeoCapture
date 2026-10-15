@@ -35,3 +35,14 @@ test("street-side remains blank for GPS straddling official centreline", () => {
   assert.equal(result.status,"matched");
   assert.equal(result.side,"");
 });
+
+test("a precise fix near the reviewed dead end resolves without inventing junctions", () => {
+  const r=matcher.resolve(-37.80190,144.90275,3,{suburb:"Footscray",postcode:"3011"});
+  assert.equal(r.status,"matched");
+  assert.deepEqual(r.between,["COWPER STREET","DEAD END"]);
+  assert.equal(r.side,"");
+});
+test("a noisy fix at the dead end remains uncertain", () => {
+  const r=matcher.resolve(-37.80190,144.90275,22,{suburb:"Footscray",postcode:"3011"});
+  assert.equal(r.status,"ambiguous");
+});
