@@ -83,6 +83,15 @@ class WholeMunicipalityTests(unittest.TestCase):
         self.assertEqual(report["previouslyPublishedGeometryMatched"],1)
         self.assertFalse(report["completeCoverageClaim"])
 
+    def test_reversed_official_pfi_path_remains_verified(self):
+        source = {"type":"FeatureCollection","features":[feature(1)]}
+        f = feature(1, list(reversed(source["features"][0]["geometry"]["coordinates"])))
+        f["properties"]["vicmapPFI"] = 1
+        f["properties"]["boundaryEndpointsVerified"] = True
+        rows, _, _ = reconcile(source, BOUNDARY, {"features":[]}, [], [f], "a", "b")
+        self.assertEqual(rows[0]["status"],"VERIFIED")
+        self.assertTrue(rows[0]["referenceGeometryMatchesCurrentSource"])
+
     def test_changed_published_geometry_cannot_remain_verified(self):
         source = {"type":"FeatureCollection","features":[feature(1)]}
         f = feature(1, [[144.9,-37.8],[144.903,-37.8]])
