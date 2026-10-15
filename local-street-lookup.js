@@ -102,7 +102,14 @@
         return {status:"ambiguous",warnings:["Multiple nearby road segments; confirm the street and boundaries manually."],
           candidates:[...new Set(close.slice(0,6).map(c=>c.seg.street))]};
       }
-      if (best.nearestEndpoint <= Math.max(5, Math.min(15, accuracy))) {
+      // A verified, isolated dead-end terminal is not an intersecting street.
+      // Permit confident metadata matching very near that endpoint, but still
+      // suppress the side unless the GPS fix is decisively off the centreline.
+      const nearVerifiedTerminus = accuracy <= 10
+        && best.distance <= Math.max(5, accuracy * 0.8)
+        && ((best.seg.to === "DEAD END" && best.seg.endBoundary !== false && best.t >= 0.94)
+          || (best.seg.from === "DEAD END" && best.seg.startBoundary !== false && best.t <= 0.06));
+      if (best.nearestEndpoint <= Math.max(5, Math.min(15, accuracy)) && !nearVerifiedTerminus) {
         return {status:"ambiguous",warnings:["Close to an intersection; confirm the segment boundaries manually."],
           candidates:[best.seg.street]};
       }
