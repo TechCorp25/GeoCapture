@@ -19,7 +19,7 @@ from scripts.maribyrnong_inventory import line_membership
 
 def terminal_candidates(source, council, source_sha, lga_sha, published_pf=None):
     by_pfi, nodes = graph_features(source)
-    prior = set(map(str, published_pf or ()))
+    prior = set(published_pf or ())  # pairs (source PFI, exact reviewed terminal UFI)
     rows = []
     seen = set()
     counts = Counter()
@@ -58,7 +58,7 @@ def terminal_candidates(source, council, source_sha, lga_sha, published_pf=None)
                     norm(x["properties"].get("ezi_road_name")) != norm(p.get("ezi_road_name"))})
             # This is only the nearest edge's opposite UFI, not automatically
             # a true block boundary. Preserve all ambiguity for human review.
-            previously_approved = pfi in prior
+            previously_approved = (pfi, node) in prior
             status = "FIELD_VERIFIED_REFERENCE" if previously_approved else "PENDING_FIELD_CONFIRMATION"
             reason = ("separately_reviewed_existing_Talbot_reference" if previously_approved
                       else "official_degree_one_UFI_requires_physical_terminal_and_bounding_intersection_confirmation")
@@ -108,9 +108,32 @@ def main():
         raise ValueError("Incomplete buffered transport snapshot")
     council=validate_boundary(boundary_doc,lm,Path(args.boundary).read_bytes())
     approved=set()
+    source_by_pfi,_=graph_features(road)
     for path in args.published:
-        for f in json.loads(Path(path).read_text())["features"]:
-            approved.add(str(f["properties"]["vicmapPFI"]))
+        for feature in json.loads(Path(path).read_text())["features"]:
+            p=feature.get("properties") or {}
+            if p.get("boundaryEndpointsVerified") is not True:
+                continue
+            # Only a separately corroborated DEAD END reference may mark its
+            # exact official terminal UFI verified. The other endpoint must
+            # NOT inherit certification merely by sharing its source PFI.
+            if p.get("to") != "DEAD END" and p.get("from") != "DEAD END":
+                continue
+            pfi=str(p.get("vicmapPFI"))
+            original=source_by_pfi.get(pfi)
+            if not original:
+                raise ValueError("Existing reviewed terminal PFI absent from official network")
+            import math
+            reviewed=feature["geometry"]["coordinates"]
+            terminal=reviewed[-1] if p.get("to")=="DEAD END" else reviewed[0]
+            official=original["geometry"]["coordinates"]
+            matches=[]
+            for key,coord in (("from_ufi",official[0]),("to_ufi",official[-1])):
+                if math.hypot((terminal[0]-coord[0])*88000,(terminal[1]-coord[1])*111000) < 2:
+                    matches.append(str(original["properties"][key]))
+            if len(matches)!=1:
+                raise ValueError("Ambiguous reviewed dead-end endpoint")
+            approved.add((pfi,matches[0]))
     candidates,report=terminal_candidates(road,council,rm["sha256"],lm["sha256"],approved)
     for filename,value in ((args.output,candidates),(args.report,report)):
         p=Path(filename);p.parent.mkdir(parents=True,exist_ok=True)
