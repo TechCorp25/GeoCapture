@@ -1,0 +1,40 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            144.9039780490001,
+            -37.80225195908597
+          ],
+          [
+            144.90275580500008,
+            -37.80188509308594
+          ]
+        ]
+      },
+      "properties": {
+        "roadSegmentId": "vicmap-pfi-5669272",
+        "vicmapPFI": 5669272,
+        "street": "TALBOT STREET",
+        "from": "COWPER STREET",
+        "to": "DEAD END",
+        "suburbs": [
+          "FOOTSCRAY"
+        ],
+        "postcode": "3011",
+        "boundaryEndpointsVerified": true,
+        "positiveSide": "NORTH",
+        "negativeSide": "SOUTH",
+        "evidence": "Victorian Vicmap TR_ROAD feature PFI 5669272, named junction at from_ufi 2306500, degree-one endpoint to_ufi 18845605, and independently reviewed GeoCapture parking segment metadata for Talbot Street South between Cowper Street and dead end.",
+        "reviewedOn": "2026-10-15",
+        "reviewScope": "This individual road feature only; no other Footscray segment approved.",
+        "sourceURL": "https://vicmap.land.vic.gov.au/agsgis/rest/services/vicmap/Vicmap_Transport/MapServer/1",
+        "sourceLicence": "CC BY 4.0"
+      }
+    }
+  ]
+}
