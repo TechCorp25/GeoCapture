@@ -7,6 +7,7 @@ on:
       - "scripts/fetch_vicmap_roads.py"
       - "scripts/review_vicmap_topology.py"
       - "scripts/maribyrnong_inventory.py"
+      - "scripts/stage_municipal_packs.py"
       - "tests/test_phase4_municipal_inventory.py"
       - ".github/workflows/phase4-municipal-inventory.yml"
 permissions:
@@ -74,6 +75,14 @@ jobs:
             --output work/phase4/complete-road-feature-ledger.json \
             --candidate-ledger work/phase4/road-block-ledger.json \
             --report work/phase4/municipal-inventory-report.json
+      - name: Build non-published regional release-review packs with cross-locality deduplication
+        run: |
+          python -m scripts.stage_municipal_packs \
+            --eligible work/phase4/eligible-not-published.geojson \
+            --candidate-ledger work/phase4/road-block-ledger.json \
+            --source-manifest work/phase4/roads-manifest.json \
+            --lga-manifest work/phase4/lga-manifest.json \
+            --output-dir work/phase4/staging-packages
       - name: Write artifact manifest checksums for reproducible handoff
         if: success()
         run: |
@@ -81,7 +90,7 @@ jobs:
           from pathlib import Path
           import hashlib,json,datetime
           folder=Path("work/phase4")
-          files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.iterdir()) if p.is_file()}
+          files={str(p.relative_to(folder)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.rglob("*")) if p.is_file()}
           folder.joinpath("artifact-sha256.json").write_text(json.dumps({
               "createdUTC":datetime.datetime.now(datetime.timezone.utc).isoformat(),
               "disposition":"NOT_AUTOMATICALLY_PUBLISHED",
