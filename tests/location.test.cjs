@@ -247,3 +247,55 @@ test('local audited road identity, block ID and GPS confidence persist, manual s
   assert.equal(changed.segment.between[1],"MANUAL ROAD");
   assert.equal(JSON.parse(a.saved.get('civicmaps_form')).matchedRoad,null);
 });
+
+
+test('empty fields with no provider match report lookup failure and can retry successfully', async () => {
+  const a = app();
+  a.answer(async () => ({street:null, between:[null,null], warnings:[], candidates:[]}));
+  await a.lookup();
+  assert.match(a.elements.locationStatus.textContent, /No reliable street match/);
+  assert.doesNotMatch(a.elements.locationStatus.textContent, /Existing entries|Clear a field/);
+  assert.equal(a.elements.locationStatus.className, 'status warn');
+  assert.equal(a.elements.locateStreetBtn.disabled, false);
+  a.answer(async () => suggestion);
+  await a.lookup();
+  assert.equal(a.elements.segment.value, 'TALBOT STREET');
+  assert.equal(a.elements.betweenA.value, 'COWPER STREET');
+  assert.equal(a.elements.betweenB.value, 'DEAD END');
+});
+
+test('local ambiguity on an empty form explains the match problem without asking to clear fields', async () => {
+  const a = app({resolve:() => ({status:'ambiguous', warnings:['Close to an intersection.'], candidates:['TALBOT STREET']})});
+  await a.lookup();
+  assert.match(a.elements.locationStatus.textContent, /No reliable street match/);
+  assert.match(a.elements.locationStatus.textContent, /Close to an intersection/);
+  assert.match(a.elements.locationStatus.textContent, /Nearby streets: TALBOT STREET/);
+  assert.doesNotMatch(a.elements.locationStatus.textContent, /Existing entries|Clear a field/);
+  assert.equal(a.requested(), 0);
+  assert.equal(a.elements.locateStreetBtn.disabled, false);
+});
+
+test('partial lookup distinguishes missing suggestions from genuinely occupied fields', async () => {
+  const a = app();
+  a.elements.segment.value = 'TALBOT STREET';
+  a.answer(async () => ({street:'TALBOT STREET', between:[null,null], warnings:[]}));
+  await a.lookup();
+  assert.match(a.elements.locationStatus.textContent, /No suggestions for the remaining empty fields/);
+  assert.doesNotMatch(a.elements.locationStatus.textContent, /Clear a field/);
+  a.elements.betweenA.value = 'COWPER STREET';
+  a.elements.betweenB.value = 'DEAD END';
+  a.elements.side.value = 'SOUTH';
+  a.answer(async () => suggestion);
+  await a.lookup();
+  assert.match(a.elements.locationStatus.textContent, /Street details are already entered/);
+});
+
+test('cleared and whitespace-only fields refill despite previous auto-fill state', async () => {
+  const a = app(); await a.lookup();
+  for (const id of ['segment','betweenA','betweenB']) await a.input(id, '  ');
+  await a.lookup();
+  assert.equal(a.elements.segment.value, 'TALBOT STREET');
+  assert.equal(a.elements.betweenA.value, 'COWPER STREET');
+  assert.equal(a.elements.betweenB.value, 'DEAD END');
+  assert.match(a.elements.locationStatus.textContent, /3 fields filled/);
+});
