@@ -101,6 +101,8 @@ def release(folder, destination, baseline):
             block = segment["id"].split(":")[1]
             props = block_by_id[block]
             segment["sourcePFIs"] = props["vicmapPFIs"]
+            segment["vicmapClassCodes"] = sorted({int(by_pfi[str(i)]["properties"]["class_code"])
+                                                 for i in props["vicmapPFIs"]})
             # Class-2 arterials can include parallel/divided carriageways.
             # The road/intersections are source-verified but no cardinal
             # side may be inferred before device/field corroboration.
