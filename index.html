@@ -200,6 +200,8 @@
   </div>
 </div>
 
+<script src="./local-road-data.js"></script>
+<script src="./local-street-lookup.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -270,6 +272,8 @@ function restoreForm() {
   locationAttribution = form.locationAttribution || null;
   autoLocationFields = form.autoLocationFields || {};
   $("locationAttribution").hidden = !locationAttribution;
+  if (locationAttribution) $("locationAttribution").textContent = locationAttribution.source === "OpenStreetMap"
+    ? "© OpenStreetMap contributors · ODbL" : (locationAttribution.source || "Local street index");
   fields.forEach(id => { if (form[id] !== undefined) $(id).value = form[id]; });
   $("unnumbered").checked = Boolean(form.unnumbered);
   // Only infer providers from an explicit prefix, never from the legacy shared field name.
@@ -284,7 +288,7 @@ function restoreForm() {
 
 fields.forEach(id => {
   $(id).addEventListener("input", () => {
-    if (["suburb", "postcode", "segment", "betweenA", "betweenB"].includes(id)) locationFieldEdited(id);
+    if (["suburb", "postcode", "segment", "betweenA", "betweenB", "side"].includes(id)) locationFieldEdited(id);
     updateModeUI();
     saveForm();
     scheduleMetadataPersist();
@@ -574,7 +578,7 @@ function locationFieldEdited(id) {
   delete autoLocationFields[id];
   if (["segment", "suburb", "postcode"].includes(id) && !points.length) {
     // Boundaries suggested for the previous street are no longer applicable.
-    for (const boundary of (id === "segment" ? ["betweenA", "betweenB"] : ["segment", "betweenA", "betweenB"])) {
+    for (const boundary of (id === "segment" ? ["betweenA", "betweenB", "side"] : ["segment", "betweenA", "betweenB", "side"])) {
       if (autoLocationFields[boundary] && $(boundary).value === autoLocationFields[boundary]) {
         $(boundary).value = "";
       }
@@ -601,8 +605,8 @@ async function getLocationSettings() {
 
 async function autoFillLocation(reuseFix=false) {
   if (locationBusy) return;
-  if (navigator.onLine === false) {
-    locationMessage("Street lookup needs internet. Manual entry and local capture remain available.", "warn");
+  if (navigator.onLine === false && typeof GeoCaptureLocalLookup === "undefined") {
+    locationMessage("Local street index unavailable offline. Manual entry and capture remain available.", "warn");
     return;
   }
   if (points.length) {
@@ -612,19 +616,16 @@ async function autoFillLocation(reuseFix=false) {
   const request = ++locationRequest;
   const identity = segmentId;
   const editVersion = locationEditVersion;
-  const initial = Object.fromEntries(["suburb", "postcode", "segment", "betweenA", "betweenB"].map(id => [id, $(id).value]));
+  const initial = Object.fromEntries(["suburb", "postcode", "segment", "betweenA", "betweenB", "side"].map(id => [id, $(id).value]));
   locationBusy = true;
   $("locateStreetBtn").disabled = true;
-  $("captureBtn").disabled = true;
-  $("clearBtn").disabled = true;
+  // Street lookup must not hold bay capture or segment persistence hostage.
   $("googleReference").hidden = true;
   let timer;
   try {
     validateLocality();
     locationController = new AbortController();
     const controller = locationController;
-    const settings = await getLocationSettings();
-    if (!settings.enabled) throw new Error("Street lookup is disabled. Enter the details manually.");
     locationMessage("Acquiring a fresh GPS fix for the street…", "warn");
     if (!reuseFix || !lastLookupFix || Date.now() - lastLookupFix.timestamp > 60000) {
       const fix = await bestFixSingleTap(25);
@@ -635,23 +636,44 @@ async function autoFillLocation(reuseFix=false) {
       locationMessage("Fields changed during GPS acquisition. Entries kept; tap auto-fill again.", "warn");
       return;
     }
-    locationMessage("Finding the street and adjoining boundaries…", "warn");
-    timer = setTimeout(() => controller.abort(), 60000);
-    const response = await fetch("/api/location/suggest", {
-      method:"POST", cache:"no-store", signal:controller.signal,
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({latitude:lastLookupFix.coords.latitude, longitude:lastLookupFix.coords.longitude,
-        accuracy:lastLookupFix.coords.accuracy, street:initial.segment.trim(),
-        suburb:initial.suburb.trim(), postcode:initial.postcode.trim()})
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Street lookup failed. Enter the details manually.");
-    if (request !== locationRequest || identity !== segmentId) return;
+    // Resolve locally first. The April CivicMAPS engine never calls a remote API.
+    const local = typeof GeoCaptureLocalLookup !== "undefined"
+      ? GeoCaptureLocalLookup.resolve(lastLookupFix.coords.latitude, lastLookupFix.coords.longitude,
+          lastLookupFix.coords.accuracy, {street:initial.segment.trim(), suburb:initial.suburb.trim(),
+            postcode:initial.postcode.trim()})
+      : null;
+    let result;
+    if (local?.status === "matched") {
+      result = local;
+      locationMessage("Local street matched.", "good");
+    } else if (local?.status === "ambiguous") {
+      // Do not turn a known ambiguity into a silently accepted server guess.
+      result = {street:null, between:[null,null], warnings:local.warnings, candidates:local.candidates};
+    } else {
+      if (navigator.onLine === false) {
+        locationMessage("No local match offline. Enter street details manually.", "warn");
+        return;
+      }
+      const settings = await getLocationSettings();
+      if (!settings.enabled) throw new Error("Remote lookup disabled; enter street details manually.");
+      locationMessage("No local match. Checking remote road data…", "warn");
+      timer = setTimeout(() => controller.abort(), 60000);
+      const response = await fetch("/api/location/suggest", {
+        method:"POST", cache:"no-store", signal:controller.signal,
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({latitude:lastLookupFix.coords.latitude, longitude:lastLookupFix.coords.longitude,
+          accuracy:lastLookupFix.coords.accuracy, street:initial.segment.trim(),
+          suburb:initial.suburb.trim(), postcode:initial.postcode.trim()})
+      });
+      result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Street lookup failed. Enter the details manually.");
+    }
+    if (request !== locationRequest || identity !== segmentId || points.length) return;
     if (editVersion !== locationEditVersion) {
       locationMessage("Fields changed during lookup. Entries kept; tap auto-fill again.", "warn");
       return;
     }
-    const suggestions = {segment:result.street, betweenA:result.between?.[0], betweenB:result.between?.[1]};
+    const suggestions = {segment:result.street, betweenA:result.between?.[0], betweenB:result.between?.[1], side:result.side};
     let filled = 0;
     // A/B are unordered in the schema. Align a known boundary before filling
     // the other, so a retained A cannot also be inserted into B.
@@ -676,6 +698,8 @@ async function autoFillLocation(reuseFix=false) {
     if (filled) {
       locationAttribution = result.attribution;
       $("locationAttribution").hidden = false;
+      $("locationAttribution").textContent = locationAttribution?.source === "OpenStreetMap"
+        ? "© OpenStreetMap contributors · ODbL" : (locationAttribution?.source || "Local street index");
       saveForm();
       scheduleMetadataPersist();
     }
@@ -699,8 +723,6 @@ async function autoFillLocation(reuseFix=false) {
       locationBusy = false;
       locationController = null;
       $("locateStreetBtn").disabled = false;
-      $("captureBtn").disabled = false;
-      $("clearBtn").disabled = false;
     }
   }
 }
@@ -794,7 +816,6 @@ function bestFixSingleTap(accuracyOverride) {
 }
 
 $("captureBtn").addEventListener("click", async () => {
-  if (locationBusy) return;
   try {
     validateMeta();
     const bay = currentBay();
@@ -948,7 +969,7 @@ window.addEventListener("online", () => {
 restoreForm();
 render();
 checkStorageHealth();
-getLocationSettings().catch(() => {});
+// Remote lookup configuration is loaded only when a local match is unavailable.
 
 if (localStorage.getItem(PENDING_KEY)) {
   setStorageStatus("Storage: unsynced local capture found; retrying MongoDB…", "warn");
