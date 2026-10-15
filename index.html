@@ -428,7 +428,7 @@ function render() {
   $("rows").innerHTML = points.map((p, index) => `
     <tr>
       <td>${pointLabel(p, index)}</td>
-      <td>${p.latitude == null ? escapeHtml(p.address || "Address only") : p.latitude.toFixed(8)}</td>
+      <td>${p.latitude == null ? String(p.address || "Address only").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])) : p.latitude.toFixed(8)}</td>
       <td>${p.longitude == null ? "—" : p.longitude.toFixed(8)}</td>
       <td>${p.accuracy == null ? "—" : p.accuracy.toFixed(1)}</td>
     </tr>`).join("");
