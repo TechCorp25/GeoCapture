@@ -223,6 +223,7 @@ let mongoConfigured = null;
 let legacyPaymentNeedsReview = false;
 let locationAttribution = null;
 let autoLocationFields = {};
+let matchedRoad = null;
 let lastLookupFix = null;
 let locationRequest = 0;
 let locationController = null;
@@ -266,6 +267,7 @@ function saveForm() {
   form.legacyPaymentNeedsReview = legacyPaymentNeedsReview;
   form.locationAttribution = locationAttribution;
   form.autoLocationFields = autoLocationFields;
+  form.matchedRoad = matchedRoad;
   fields.forEach(id => form[id] = $(id).value);
   localStorage.setItem(FORM_KEY, JSON.stringify(form));
 }
@@ -274,6 +276,7 @@ function restoreForm() {
   const form = JSON.parse(localStorage.getItem(FORM_KEY) || "{}");
   locationAttribution = form.locationAttribution || null;
   autoLocationFields = form.autoLocationFields || {};
+  matchedRoad = form.matchedRoad && typeof form.matchedRoad.id === "string" ? form.matchedRoad : null;
   $("locationAttribution").hidden = !locationAttribution;
   if (locationAttribution) $("locationAttribution").textContent = locationAttribution.source === "OpenStreetMap"
     ? "© OpenStreetMap contributors · ODbL" : (locationAttribution.source || "Local street index");
@@ -439,6 +442,16 @@ function buildPayload(savedReason="manual", storageState="active") {
       suburb: $("suburb").value.trim().toUpperCase() || null,
       postcode: $("postcode").value.trim() || null,
       ...(locationAttribution ? {locationAttribution} : {}),
+      ...(matchedRoad && matchedRoad.street === $("segment").value.trim().toUpperCase()
+        && [matchedRoad.boundaryA, matchedRoad.boundaryB].every(value =>
+          [$("betweenA").value.trim().toUpperCase(), $("betweenB").value.trim().toUpperCase()].includes(value))
+        ? {roadNetworkSegmentId: matchedRoad.id,
+           roadNetworkBlockId: matchedRoad.blockId,
+           roadMatch: {source: "local", sourceReviewState: matchedRoad.reviewState,
+                       distanceMetres: matchedRoad.distanceMetres,
+                       gpsAccuracyMetres: matchedRoad.gpsAccuracyMetres,
+                       matchedAt: matchedRoad.matchedAt}}
+        : {}),
       between: [
         $("betweenA").value.trim().toUpperCase(),
         $("betweenB").value.trim().toUpperCase()
@@ -578,6 +591,7 @@ function locationMessage(message, cls="") {
 
 function locationFieldEdited(id) {
   locationEditVersion += 1;
+  if (["suburb", "postcode", "segment", "betweenA", "betweenB"].includes(id)) matchedRoad = null;
   delete autoLocationFields[id];
   if (["segment", "suburb", "postcode"].includes(id) && !points.length) {
     // Boundaries suggested for the previous street are no longer applicable.
@@ -717,6 +731,16 @@ async function autoFillLocation(reuseFix=false) {
     }
     if (filled) {
       locationAttribution = result.attribution;
+      matchedRoad = result.source === "local" && typeof result.roadSegmentId === "string"
+        ? {id: result.roadSegmentId,
+           blockId: result.roadSegmentId.replace(/:\d+$/, ""),
+           street: result.street,
+           boundaryA: result.between?.[0], boundaryB: result.between?.[1],
+           reviewState: result.attribution?.reviewState || "SOURCE_REVIEWED",
+           distanceMetres: result.distance,
+           gpsAccuracyMetres: lastLookupFix.coords.accuracy,
+           matchedAt: new Date().toISOString()}
+        : null;
       $("locationAttribution").hidden = false;
       $("locationAttribution").textContent = locationAttribution?.source === "OpenStreetMap"
         ? "© OpenStreetMap contributors · ODbL" : (locationAttribution?.source || "Local street index");
@@ -964,6 +988,7 @@ $("clearBtn").addEventListener("click", async () => {
   lastLookupFix = null;
   autoLocationFields = {};
   locationAttribution = null;
+  matchedRoad = null;
   ["segment", "betweenA", "betweenB", "side"].forEach(id => $(id).value = "");
   $("locateStreetBtn").disabled = false;
   $("captureBtn").disabled = false;

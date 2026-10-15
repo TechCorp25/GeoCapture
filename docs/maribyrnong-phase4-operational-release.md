@@ -46,6 +46,8 @@ The source review explicitly includes officially defined Vicmap class 2 arterial
 | Yarraville | 330 |
 | **Total** | **1,635** |
 
+Captured parking-segment v3 exports now retain `roadNetworkSegmentId` (the stable matched geometry-edge identity) and `roadNetworkBlockId` (the official PFI-based road-block identity), alongside `roadMatch` provenance containing source review status, GPS accuracy and lateral match distance. These identifiers are recorded **only when the fields still agree with the local source match**; manually changing the street, locality or between-street boundaries invalidates the stored match identity. Editing the cardinal side does not overwrite or fabricate source topology. Existing historical records remain valid and unmodified. These fields are operator metadata, not a substitute for independent municipal source verification.
+
 For official arterial class-2 road features the cardinal side is deliberately **unset** until actual-device/field verification. The existing GPS uncertainty/centreline ambiguity gates remain effective for other road classes. Postcodes are not inferred. All automatic fields remain editable, with operator overrides preserved.
 
 ## Complete field-review queue for source terminals
