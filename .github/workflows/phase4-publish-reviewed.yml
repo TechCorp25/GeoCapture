@@ -1,0 +1,89 @@
+name: GeoCapture Phase 4 independently reviewed municipal pack release
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/phase4-maribyrnong-road-pack-release"]
+    paths:
+      - "scripts/release_phase4_reviewed.py"
+      - "municipal-road-loader.js"
+      - "index.html"
+      - "sw.js"
+      - "tests/phase4-loader.test.cjs"
+      - ".github/workflows/phase4-publish-reviewed.yml"
+permissions:
+  contents: write
+  actions: read
+jobs:
+  independently-verify-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install existing server dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run all production regressions before publishing
+        run: |
+          python -m unittest discover -s tests -v
+          node --test tests/*.test.cjs
+      - name: Recover byte-exact Phase 4 audited source and staging snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: maribyrnong-phase4-whole-council-inventory
+          run-id: 38686980656
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: work/phase4-release-input
+      - name: Re-audit every staged block against official road UFI topology, source PFIs and council polygon
+        run: |
+          python -m scripts.release_phase4_reviewed \
+            --audit work/phase4-release-input \
+            --output municipal-data \
+            --published data/reviewed/maribyrnong-talbot-cowper-dead-end.geojson \
+            --published data/reviewed/maribyrnong-footscray-phase3-20261015.geojson
+      - name: Check 1,454 unique reviewed blocks and package source provenance
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          m=json.loads(pathlib.Path('municipal-data/manifest.json').read_text())
+          assert len(m['packages'])==10 and m['newSourceQualifiedRoadBlocks']==1454
+          assert m['publishedExistingRoadBlocks']==33 and not m['operationalCoverageComplete']
+          total=0; allids=set()
+          for name,item in m['packages'].items():
+            d=json.loads(pathlib.Path('municipal-data',name+'.json').read_text())
+            assert all(s['reviewState']=='OFFICIAL_SOURCE_TOPOLOGY_VERIFIED_HANDSET_QA_PENDING'
+                       for s in d['segments'])
+            assert len(d['segments'])>=item['roadBlocks']
+            new={s['id'] for s in d['segments']}
+            assert len(new)==len(d['segments']) and not new & allids
+            allids.update(new); total+=len(d['segments'])
+          assert total==m['newGeometryEdges']
+          print('Release review passed',m['newSourceQualifiedRoadBlocks'],'blocks',total,'edges')
+          PY
+      - name: Commit approved source-verified, handset-QA-pending static municipal packs on feature branch
+        if: github.ref == 'refs/heads/feature/phase4-maribyrnong-road-pack-release'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add municipal-data/
+          if ! git diff --cached --quiet; then
+            git commit -m "GeoCapture: release 1,454 audited Maribyrnong blocks into offline locality packs [skip ci]"
+            git push origin HEAD:feature/phase4-maribyrnong-road-pack-release
+          fi
+      - name: Archive byte-exact review and emitted pack manifest for traceability
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geocapture-phase4-approved-package-release-evidence
+          path: |
+            municipal-data/
+            work/phase4-release-input/municipal-inventory-report.json
+            work/phase4-release-input/candidate-dispositions.json
+          if-no-files-found: warn
+          retention-days: 30
