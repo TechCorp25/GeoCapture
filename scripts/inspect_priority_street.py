@@ -4,7 +4,7 @@ import argparse
 from collections import defaultdict
 import json
 from pathlib import Path
-from scripts.review_vicmap_topology import road_graph, metres
+from review_vicmap_topology import road_graph, metres
 
 def inspect(data, name):
     edges,nodes,corrupt,rejected=road_graph(data)
