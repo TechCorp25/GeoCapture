@@ -1,0 +1,108 @@
+name: GeoCapture Phase 4 municipality-wide source inventory
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feature/phase4-*"]
+    paths:
+      - "scripts/fetch_vicmap_roads.py"
+      - "scripts/review_vicmap_topology.py"
+      - "scripts/maribyrnong_inventory.py"
+      - "scripts/stage_municipal_packs.py"
+      - "tests/test_phase4_municipal_inventory.py"
+      - "tests/test_phase4_review_packs.py"
+      - ".github/workflows/phase4-municipal-inventory.yml"
+permissions:
+  contents: read
+jobs:
+  full-maribyrnong-source-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install existing server dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run full Python and JavaScript regressions
+        run: |
+          python -m unittest discover -s tests -v
+          node --test tests/*.test.cjs
+      - name: Acquire official whole municipality polygon
+        run: |
+          mkdir -p work/phase4
+          python -m scripts.fetch_vicmap_lga \
+            --output work/phase4/lga.geojson \
+            --manifest work/phase4/lga-manifest.json
+      - name: Acquire polygon-derived buffered road snapshot and reconcile official ArcGIS object IDs
+        run: |
+          python -m scripts.fetch_vicmap_roads \
+            --output work/phase4/roads.geojson \
+            --manifest work/phase4/roads-manifest.json \
+            --boundary work/phase4/lga.geojson \
+            --boundary-manifest work/phase4/lga-manifest.json \
+            --buffer-metres 600
+      - name: Generate all review-only bounding street candidates from official UFI network
+        run: |
+          python -m scripts.review_vicmap_topology \
+            --input work/phase4/roads.geojson \
+            --output work/phase4/block-candidates.geojson \
+            --report work/phase4/topology-report.json
+      - name: Independently audit candidate geometry and council membership
+        run: |
+          python -m scripts.audit_municipal_candidates \
+            --source work/phase4/roads.geojson \
+            --source-manifest work/phase4/roads-manifest.json \
+            --candidates work/phase4/block-candidates.geojson \
+            --boundary work/phase4/lga.geojson \
+            --boundary-manifest work/phase4/lga-manifest.json \
+            --dispositions work/phase4/candidate-dispositions.json \
+            --verified work/phase4/eligible-not-published.geojson \
+            --report work/phase4/independent-audit.json
+      - name: Reconcile all source PFIs against audited road-block candidates and 33 previously released PFIs
+        run: |
+          python -m scripts.maribyrnong_inventory \
+            --source work/phase4/roads.geojson \
+            --source-manifest work/phase4/roads-manifest.json \
+            --boundary work/phase4/lga.geojson \
+            --boundary-manifest work/phase4/lga-manifest.json \
+            --candidates work/phase4/block-candidates.geojson \
+            --dispositions work/phase4/candidate-dispositions.json \
+            --published data/reviewed/maribyrnong-talbot-cowper-dead-end.geojson \
+            --published data/reviewed/maribyrnong-footscray-phase3-20261015.geojson \
+            --output work/phase4/complete-road-feature-ledger.json \
+            --candidate-ledger work/phase4/road-block-ledger.json \
+            --report work/phase4/municipal-inventory-report.json
+      - name: Build non-published regional release-review packs with cross-locality deduplication
+        run: |
+          python -m scripts.stage_municipal_packs \
+            --eligible work/phase4/eligible-not-published.geojson \
+            --candidate-ledger work/phase4/road-block-ledger.json \
+            --source-manifest work/phase4/roads-manifest.json \
+            --lga-manifest work/phase4/lga-manifest.json \
+            --output-dir work/phase4/staging-packages
+      - name: Write artifact manifest checksums for reproducible handoff
+        if: success()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib,json,datetime
+          folder=Path("work/phase4")
+          files={str(p.relative_to(folder)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.rglob("*")) if p.is_file()}
+          folder.joinpath("artifact-sha256.json").write_text(json.dumps({
+              "createdUTC":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "disposition":"NOT_AUTOMATICALLY_PUBLISHED",
+              "files":files},indent=2)+"\n")
+          print("Phase 4 evidence files:",len(files))
+          PY
+      - name: Retain full official snapshot, topology ledger and audit evidence (never publish automatically)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maribyrnong-phase4-whole-council-inventory
+          path: work/phase4/
+          if-no-files-found: warn
+          retention-days: 30

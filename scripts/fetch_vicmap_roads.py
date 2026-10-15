@@ -79,14 +79,90 @@ def collect(bbox, max_features=12000):
         (x.get("properties") or {}).get("pfi") or x.get("id") or ""))
     return {"type": "FeatureCollection", "features": records}
 
+
+def polygon_bounds(boundary_geometry, buffer_metres=600):
+    """Use official LGA polygon for acquisition extent; buffer protects junctions."""
+    if boundary_geometry.get("type") not in ("Polygon", "MultiPolygon"):
+        raise ValueError("Expected official LGA Polygon/MultiPolygon")
+    if not 100 <= buffer_metres <= 2000:
+        raise ValueError("Municipal buffer must be between 100 and 2000 metres")
+    polygons = ([boundary_geometry["coordinates"]] if boundary_geometry["type"] == "Polygon"
+                else boundary_geometry["coordinates"])
+    points = [point for poly in polygons for ring in poly for point in ring]
+    if not points or any(len(p) < 2 or not all(isinstance(v, (int, float)) and
+                        __import__("math").isfinite(v) for v in p[:2]) for p in points):
+        raise ValueError("Invalid official LGA polygon coordinates")
+    west, east = min(p[0] for p in points), max(p[0] for p in points)
+    south, north = min(p[1] for p in points), max(p[1] for p in points)
+    import math
+    midlat = (south + north) / 2
+    latbuffer = buffer_metres / 111000
+    lonbuffer = buffer_metres / (111000 * math.cos(math.radians(midlat)))
+    return (west - lonbuffer, south - latbuffer, east + lonbuffer, north + latbuffer)
+
+
+def collect_municipality(boundary_geometry, buffer_metres=600, max_features=65000):
+    """Retrieve all IDs twice around paged fetch to fail on gaps/source drift.
+
+    Envelope is ONLY the source acquisition extent. Legal municipality
+    membership is determined separately from the original official polygon.
+    """
+    bbox = polygon_bounds(boundary_geometry, buffer_metres)
+    query = {"where": "1=1", "geometry": ",".join(map(str, bbox)),
+             "geometryType": "esriGeometryEnvelope", "inSR": 4326,
+             "spatialRel": "esriSpatialRelIntersects",
+             "returnIdsOnly": "true", "f": "json"}
+    def official_ids():
+        result = fetch_page(query)
+        ids = result.get("objectIds")
+        if not isinstance(ids, list) or not ids:
+            raise ValueError("Official ArcGIS object ID inventory absent or empty")
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate ArcGIS object identifiers")
+        if len(ids) > max_features:
+            raise ValueError("Municipal extent exceeds configured snapshot capacity")
+        return set(ids)
+    before = official_ids()
+    snapshot = collect(bbox, max_features=max_features)
+    actual = [f.get("properties", {}).get("id", f.get("id")) for f in snapshot["features"]]
+    if len(actual) != len(set(actual)) or None in actual:
+        raise ValueError("Duplicate or absent official ArcGIS road object IDs")
+    if before != set(actual):
+        raise ValueError("Incomplete ArcGIS pagination or mismatch with official ID inventory")
+    if before != official_ids():
+        raise ValueError("Official road source changed during acquisition")
+    pfis = [f.get("properties", {}).get("pfi") for f in snapshot["features"]]
+    if None in pfis or len(pfis) != len(set(map(str, pfis))):
+        raise ValueError("Missing or duplicate official Vicmap PFI; review required")
+    return snapshot, {"bboxWGS84": bbox, "bufferMetres": buffer_metres,
+                      "officialObjectIdCount": len(before),
+                      "receivedObjectIdCount": len(actual),
+                      "paginationVerified": True,
+                      "queryExtentBasis": "official_LGA_polygon_bounds_plus_junction_buffer",
+                      "municipalityScope": "MARIBYRNONG"}
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--bbox", nargs=4, type=float, default=list(DEFAULT_BBOX))
+    parser.add_argument("--boundary", help="Verified official Maribyrnong LGA GeoJSON")
+    parser.add_argument("--boundary-manifest", help="Checksum manifest for official LGA")
+    parser.add_argument("--buffer-metres", type=int, default=600)
     args = parser.parse_args()
+    if bool(args.boundary) != bool(args.boundary_manifest):
+        parser.error("--boundary and --boundary-manifest are required together")
     bbox = tuple(args.bbox)
-    doc = collect(bbox)
+    metadata = {}
+    if args.boundary:
+        from scripts.audit_municipal_candidates import validate_boundary
+        raw = pathlib.Path(args.boundary).read_bytes()
+        geometry = validate_boundary(json.loads(raw),
+                   json.loads(pathlib.Path(args.boundary_manifest).read_text()), raw)
+        doc, metadata = collect_municipality(geometry, args.buffer_metres)
+        bbox = metadata["bboxWGS84"]
+    else:
+        doc = collect(bbox)
     dest = pathlib.Path(args.output); dest.parent.mkdir(parents=True, exist_ok=True)
     encoded = (json.dumps(doc, separators=(",", ":"), ensure_ascii=False)+"\n").encode("utf-8")
     dest.write_bytes(encoded)
@@ -96,9 +172,12 @@ def main():
         "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
         "retrievedUTC": dt.datetime.now(dt.timezone.utc).isoformat(),
         "bboxWGS84": bbox, "featureCount": len(doc["features"]),
+        **metadata,
         "sha256": hashlib.sha256(encoded).hexdigest(),
         "reviewStatus": "UNVERIFIED_CANDIDATE_NOT_FOR_PRODUCTION",
-        "note": "Bbox is a Footscray study area, not a legally accurate council boundary.",
+        "note": ("Authoritative polygon used for municipal scope; bounding envelope plus "
+                 "buffer is acquisition-only; separately clip/classify to the LGA" if args.boundary
+                 else "Bbox is a Footscray study area, not a legally accurate council boundary."),
     }
     pathlib.Path(args.manifest).write_text(json.dumps(manifest, indent=2)+"\n")
     print("VICMAP:",json.dumps(manifest))
