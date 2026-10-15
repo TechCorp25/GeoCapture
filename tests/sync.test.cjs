@@ -163,3 +163,53 @@ test('offline completed street and next street both survive and resynchronise af
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(a.saved.has('civicmaps_pending_segments_v1'),false);
 });
+
+test('localStorage quota failure does not accept or number an uncommitted bay', async () => {
+  const a=fieldApp();
+  a.run(`(() => {
+    const original = localStorage.setItem;
+    let failOnce = true;
+    localStorage.setItem = function(key, value) {
+      if (key === 'civicmaps_points' && JSON.parse(value).length === 1 && failOnce) {
+        failOnce = false;
+        throw new Error('QuotaExceededError');
+      }
+      return original.call(this,key,value);
+    };
+  })()`);
+  await a.click('captureBtn');
+  assert.equal(a.run('points.length'),0,'failed write must roll back in-memory bay');
+  assert.equal(a.elements.count.textContent,0,'failed capture must not update visible count');
+  assert.match(a.elements.status.textContent,/Bay not saved/);
+  assert.equal(a.writes.length,0,'failed local commit must not post to MongoDB');
+  assert.equal(a.elements.captureBtn.disabled,false);
+  await a.click('captureBtn');
+  assert.equal(a.run('points.length'),1,'retry can commit same bay after quota pressure lifts');
+  assert.equal(a.writes[0].payload.bays[0].bay,1,'bay numbering must not skip failed attempt');
+  a.finishWrite(0);
+  await new Promise(resolve=>setImmediate(resolve));
+});
+
+test('failed local undo preserves the last bay and prevents destructive sync', async () => {
+  const a=fieldApp();
+  await a.click('captureBtn');
+  const saved = a.saved.get('civicmaps_points');
+  a.run(`(() => {
+    const original = localStorage.setItem;
+    let failOnce = true;
+    localStorage.setItem = function(key, value) {
+      if (key === 'civicmaps_points' && JSON.parse(value).length === 0 && failOnce) {
+        failOnce = false;
+        throw new Error('QuotaExceededError');
+      }
+      return original.call(this,key,value);
+    };
+  })()`);
+  await a.click('undoBtn');
+  assert.equal(a.run('points.length'),1,'failed undo must restore the in-memory bay');
+  assert.equal(a.saved.get('civicmaps_points'),saved,'durable bay data must remain unchanged');
+  assert.match(a.elements.status.textContent,/Undo not saved/);
+  assert.equal(a.writes.length,1,'no uncommitted destructive revision may be sent');
+  a.finishWrite(0);
+  await new Promise(resolve=>setImmediate(resolve));
+});
