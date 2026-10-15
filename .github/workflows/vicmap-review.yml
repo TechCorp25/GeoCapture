@@ -26,6 +26,11 @@ jobs:
             --output work/vicmap/footscray-source.geojson \
             --manifest work/vicmap/source-manifest.json \
             --bbox 144.87 -37.835 144.945 -37.785
+      - name: Inspect Talbot Street official road geometry for dead-end review
+        run: |
+          python scripts/inspect_priority_street.py \
+            --input work/vicmap/footscray-source.geojson \
+            --street "TALBOT STREET"
       - name: Generate review-only intersection candidates
         run: |
           python scripts/review_vicmap_topology.py \
