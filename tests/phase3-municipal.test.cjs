@@ -42,5 +42,7 @@ test("p95 for audited 179-edge mobile bundle is less than 250ms after fix",()=>{
  const times=[];
  for(let i=0;i<800;i++){const start=performance.now();resolver.resolve(lat,lon,4);times.push(performance.now()-start);}
  times.sort((a,b)=>a-b);
- assert.ok(times[Math.floor(times.length*.95)]<250);
+ const p95=times[Math.floor(times.length*.95)];
+ console.log(`Local-only Footscray 179-edge matching: ${times.length} fixes, p95=${p95.toFixed(3)}ms (Node CI, excludes GPS/network/MongoDB)`);
+ assert.ok(p95<250);
 });
