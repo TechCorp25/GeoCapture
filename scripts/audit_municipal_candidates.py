@@ -58,7 +58,8 @@ def validate_boundary(boundary, manifest, raw):
         raise ValueError('Require exactly one official council polygon')
     feature = features[0]
     props = feature.get('properties') or {}
-    if not any(norm(v) == 'MARIBYRNONG' for k, v in props.items() if 'name' in k.lower()):
+    allowed = {'MARIBYRNONG', 'MARIBYRNONG (C)', 'CITY OF MARIBYRNONG', 'MARIBYRNONG CITY COUNCIL'}
+    if not any(norm(v) in allowed for k, v in props.items() if 'name' in k.lower()):
         raise ValueError('LGA name does not identify Maribyrnong')
     geometry = feature.get('geometry') or {}
     if geometry.get('type') not in ('Polygon', 'MultiPolygon'):
