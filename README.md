@@ -4,13 +4,22 @@ Internal CivicMAPS engineering tool for parking-bay data capture.
 
 ## Street and boundary auto-fill
 
+GeoCapture now attempts a **local, on-device road-segment match first** using the
+historic CivicMAPS Melbourne CBD grid. Successful local matches require no street
+provider, API key, Render request or MongoDB connection. GPS uncertainty suppresses
+unreliable street-side suggestions; intersecting/ambiguous roads require operator
+verification. The primary local seed includes **146 CBD segments only**, not Footscray
+or all City of Melbourne roads. Uncovered streets use the existing OSM service when
+online and configured; manual fields are always editable. Lookup does not block
+parking-bay capture or its separate local persistence queue.
+
 After an operator enables lookup, tap **Auto-fill street & between streets** before capturing the first bay. The
 app takes a fresh fix within ±25 m, independently of the stricter bay-capture quality gate, finds the current
 street, and follows its connected road geometry in both directions to suggest
 the adjoining street or `DEAD END`. Review the result against the signs on site.
 The lookup does not record a bay or replace any measured bay coordinates.
 
-All three text fields remain editable. Only blank fields are filled. Existing
+All four street/side fields remain editable. Only blank fields are filled. Existing
 entries, including edits or deletions made while a request is running, are kept.
 Clear an entry to request a new suggestion. Editing the street removes boundaries
 previously auto-filled for that street; manual boundaries are retained for review.
@@ -22,8 +31,9 @@ still be corrected manually. This prevents a new location changing an active sur
 
 ### Providers and configuration
 
-The saved street/boundary names are derived independently from **OpenStreetMap**
-road topology through Overpass. A Google reverse-geocoded street is optionally
+When the local index does not contain a trustworthy match, remote fallback
+street/boundary names are derived from **OpenStreetMap** road topology through
+Overpass. Historical local matches retain their own source attribution. A Google reverse-geocoded street is optionally
 shown as a separate, transient reference. Google does not expose both adjacent
 intersections or a dead-end flag through its documented Geocoding / Roads APIs.
 Google data never selects the OSM road, populates form fields, enters local form
@@ -49,7 +59,7 @@ The operator approved OpenStreetMap lookup and production activation on 8 Octobe
 `STREET_LOOKUP_ENABLED=true`. Automated tests use synthetic road networks and
 provider responses. Google is optional and requires its own configured key.
 
-Lookups send the requested coordinate to the primary road provider, then the fallback only on failure and, only
+Remote fallback lookups send the requested coordinate to the primary road provider, then the fallback only on failure and, only
 when its key is configured, Google. There is no background location watching,
 peer sharing, or continuous upload. The GPS watcher closes when sampling finishes.
 The lookup endpoint uses POST so coordinates are absent from request URLs, returns
@@ -219,3 +229,44 @@ changing locality clears only untouched automatic street/boundary suggestions
 before capture and discards any pending lookup response.
 
 Provider recovery: both Overpass requests use HTTPS GET with a 12-second socket timeout per attempt. Socket timeouts are not an end-to-end deadline. A failed primary is skipped for 120 seconds when the fallback works; if both fail, retry is allowed after 10 seconds without repeated retries extending that pause. Locality validation and road topology resolution are unchanged.
+
+### Expanding offline municipal coverage
+
+`local-road-data.js` is the recovered 146-segment historical Melbourne CBD seed.
+`municipal-road-pack.js` is initially an intentionally empty extension point.
+Do **not** label Footscray, Maribyrnong or another municipality as covered until
+real geometric road segments with audited between-street boundaries have been
+packaged, regression-tested, and validated in field use.
+
+`scripts/build_municipal_road_pack.py` converts independently reviewed WGS84
+GeoJSON into a self-contained browser index pack. Each LineString feature must
+carry: `roadSegmentId`, `street`, `from`, `to`,
+`boundaryEndpointsVerified: true`, and preferably `suburb(s)` and `postcode`.
+`from` and `to` identify actual bounding intersections or a verified dead end,
+not arbitrary OSM way splits or nearest names. Missing topology causes rejection.
+Two-point axes and multi-point curves are supported. Diagonal roads without
+verified compass-side metadata intentionally leave side blank.
+
+```bash
+python scripts/build_municipal_road_pack.py \\
+  --input reviewed-maribyrnong-segments.geojson \\
+  --output municipal-road-pack.js \\
+  --jurisdiction maribyrnong \\
+  --source "Audited road geometry source" \\
+  --licence "Verified dataset licence" \\
+  --source-url "https://verified-data-source.example"
+```
+
+The source URL and licence **must** be replaced with the real source values.
+The generated JS is loaded after the historical seed and before the matcher.
+Bump the service worker cache version when replacing the pack so field devices
+download the new audited dataset. Preserve raw source files, provenance, source
+version, licence and audit outputs separately. Validate postcode/suburb matching,
+parallel streets, road curves, junctions, dead ends, offline mode and side labels
+on field devices before enabling municipality-wide claims.
+
+Current locally indexed coverage is intentionally restricted to the historical
+CBD seed; the July CivicMAPS index declares 3,974 source City of Melbourne road
+segments, but its imported suburb/type data and operational GPS coverage remain
+unverified. The large historical `LOCAL_STREET_BLOCKS` table alone does not
+contain complete GPS axes and must not be used to invent them.

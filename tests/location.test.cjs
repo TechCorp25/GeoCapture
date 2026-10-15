@@ -7,7 +7,7 @@ const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const suggestion = {street:'TALBOT STREET', between:['COWPER STREET','DEAD END'], warnings:[], candidates:[],
   attribution:{source:'OpenStreetMap', license:'ODbL-1.0'}, googleReference:'Google test street'};
 
-function app() {
+function app(localEngine) {
   const elements = {};
   for (const [, id] of html.matchAll(/id="([^"]+)"/g)) {
     elements[id] = {value:'', checked:false, listeners:{}, addEventListener(event, fn) {
@@ -19,6 +19,7 @@ function app() {
   let requested = 0;
   let requestBody;
   const context = vm.createContext({
+    GeoCaptureLocalLookup:localEngine,
     document:{getElementById:id => elements[id]},
     localStorage:{getItem:key => saved.get(key) ?? null, setItem:(key,val) => saved.set(key,val), removeItem:key => saved.delete(key)},
     crypto:{randomUUID:() => '9fb6b566-0012-4f32-a025-37e283ba2394'},
@@ -172,4 +173,46 @@ test('locality edits discard pending lookup and malformed postcode prevents requ
   await a.input('postcode', '301'); await a.lookup();
   assert.equal(a.requested(), 1);
   assert.match(a.elements.locationStatus.textContent, /four-digit/);
+});
+
+test("local match works offline, fills side, and never calls the external provider", async () => {
+  const a = app({resolve:() => ({
+    status:"matched", source:"local", street:"COLLINS STREET",
+    between:["QUEEN STREET","ELIZABETH STREET"], side:"NORTH", distance:5,
+    attribution:{source:"CivicMAPS historical local street geometry"}, warnings:[]
+  })});
+  a.run("navigator.onLine = false");
+  await a.lookup();
+  assert.equal(a.elements.segment.value,"COLLINS STREET");
+  assert.equal(a.elements.betweenA.value,"QUEEN STREET");
+  assert.equal(a.elements.betweenB.value,"ELIZABETH STREET");
+  assert.equal(a.elements.side.value,"NORTH");
+  assert.equal(a.requested(),0);
+  assert.equal(a.elements.locationAttribution.hidden,false);
+  assert.match(a.elements.locationAttribution.textContent,/historical/);
+  assert.notEqual(a.elements.captureBtn.disabled,true);
+  const restored=JSON.parse(a.saved.get("civicmaps_form"));
+  assert.equal(restored.side,"NORTH");
+});
+test("ambiguous local result never hits remote or populates guessed boundaries", async () => {
+  const a = app({resolve:()=>({status:"ambiguous",warnings:["Uncertain intersection"],candidates:["FIRST ROAD","SECOND ROAD"]})});
+  await a.lookup();
+  assert.equal(a.requested(),0);
+  assert.equal(a.elements.betweenA.value,"");
+  assert.match(a.elements.locationStatus.textContent,/Uncertain intersection/);
+});
+test("a local miss uses the existing remote provider only when online", async () => {
+  const a=app({resolve:()=>({status:"uncovered"})});
+  await a.lookup();
+  assert.equal(a.requested(),1);
+  assert.equal(a.elements.segment.value,"TALBOT STREET");
+});
+test("manual side correction remains authoritative after local auto-fill", async () => {
+  const a=app({resolve:()=>({status:"matched",street:"COLLINS STREET",
+    between:["QUEEN STREET","ELIZABETH STREET"],side:"NORTH",warnings:[],
+    attribution:{source:"CivicMAPS historical local street geometry"}})});
+  await a.lookup();
+  await a.input("side","SOUTH");
+  assert.equal(a.elements.side.value,"SOUTH");
+  assert.equal(JSON.parse(a.saved.get("civicmaps_form")).side,"SOUTH");
 });

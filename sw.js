@@ -1,5 +1,5 @@
-const CACHE="civicmaps-gps-v10";
-const ASSETS=["./","./index.html","./manifest.json"];
+const CACHE="civicmaps-gps-v12-local-municipal-packs";
+const ASSETS=["./","./index.html","./manifest.json","./local-road-data.js","./municipal-road-pack.js","./local-street-lookup.js"];
 self.addEventListener("install",e=>e.waitUntil(
   caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
 ));
