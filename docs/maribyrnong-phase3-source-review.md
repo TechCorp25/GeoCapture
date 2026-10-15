@@ -16,7 +16,7 @@ manifest, 1,995 candidate blocks and topology audit. Preserve and checksum
 the original; a fresh snapshot must have its own retrieval date and checksum.
 
 Authoritative LGA: **Vicmap Admin LGA_POLYGON, layer 9** (property-aligned),
-https://vicmap.land.vic.gov.au/agsgis/rest/services/vicmap/Vicmap_Admin/MapServer/9.
+https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Admin/FeatureServer/9.
 Also State of Victoria, CC BY 4.0. `scripts/fetch_vicmap_lga.py`
 fails closed unless precisely one feature named MARIBYRNONG with polygonal
 geometry is returned. The original Footscray bounding rectangle is **not**
