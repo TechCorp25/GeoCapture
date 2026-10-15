@@ -14,12 +14,14 @@ function fieldApp() {
   }
   const saved = new Map();
   const writes = [];
+  let idSequence = 0;
   let accuracy = 4;
   const context = vm.createContext({
     document:{getElementById:id => elements[id]},
     localStorage:{getItem:key=>saved.get(key) ?? null,setItem:(key,value)=>saved.set(key,value),
       removeItem:key=>saved.delete(key)},
-    crypto:{randomUUID:()=> '9fb6b566-0012-4f32-a025-37e283ba2394'},
+    crypto:{randomUUID:()=> '9fb6b566-0012-4f32-a025-' + String(++idSequence).padStart(12, '0')},
+    confirm:()=>true,
     navigator:{onLine:true}, window:{addEventListener(){}}, AbortController,
     setTimeout(fn,ms) {if(ms === 5000) return 999; return setTimeout(fn,ms);},
     clearTimeout(id) {if(id !== 999) clearTimeout(id);},
@@ -95,4 +97,69 @@ test('undoing the last bay queues an empty revision so MongoDB cannot retain it'
   a.finishWrite(1);
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(a.saved.has('civicmaps_pending_segment'),false);
+});
+
+
+test('segment completion locally preserves the previous revision while the next street is captured', async () => {
+  const a=fieldApp();
+  await a.click('captureBtn');
+  assert.equal(a.writes.length,1);
+  const firstId=a.writes[0].payload.segmentId;
+  // MongoDB deliberately does not answer before completing the street.
+  await a.click('clearBtn');
+  assert.equal(a.run('points.length'),0);
+  assert.equal(a.elements.clearBtn.disabled,false);
+  const firstQueue=JSON.parse(a.saved.get('civicmaps_pending_segments_v1'));
+  assert.equal(JSON.parse(firstQueue[firstId]).storageState,'complete');
+  assert.equal(JSON.parse(firstQueue[firstId]).revision,2);
+
+  a.elements.segment.value='SECOND STREET';
+  a.elements.betweenA.value='THIRD ROAD';
+  a.elements.betweenB.value='FOURTH ROAD';
+  a.elements.side.value='SOUTH';
+  await a.click('captureBtn');
+  assert.equal(a.run('points.length'),1);
+  assert.equal(a.elements.captureBtn.disabled,false);
+  const queued=JSON.parse(a.saved.get('civicmaps_pending_segments_v1'));
+  const ids=Object.keys(queued);
+  assert.equal(ids.length,2,'completed street must remain queued alongside new street');
+  const secondId=ids.find(id=>id!==firstId);
+  assert.ok(secondId);
+  assert.equal(JSON.parse(queued[secondId]).bays.length,1);
+  assert.equal(a.writes.length,1,'MongoDB cannot block the second bay');
+
+  a.finishWrite(0);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.writes[1].payload.segmentId,firstId);
+  assert.equal(a.writes[1].payload.storageState,'complete');
+  a.finishWrite(1);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.writes[2].payload.segmentId,secondId);
+  a.finishWrite(2);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.saved.has('civicmaps_pending_segments_v1'),false);
+  assert.equal(a.saved.has('civicmaps_pending_segment'),false);
+});
+
+test('offline completed street and next street both survive and resynchronise after reconnect', async () => {
+  const a=fieldApp();
+  a.run('navigator.onLine = false');
+  await a.click('captureBtn');
+  await a.click('clearBtn');
+  a.elements.segment.value='NEXT STREET';
+  a.elements.betweenA.value='THIRD ROAD';
+  a.elements.betweenB.value='FOURTH ROAD';
+  a.elements.side.value='WEST';
+  await a.click('captureBtn');
+  assert.equal(a.writes.length,0,'offline captures must not issue MongoDB requests');
+  assert.equal(Object.keys(JSON.parse(a.saved.get('civicmaps_pending_segments_v1'))).length,2);
+  a.run('navigator.onLine = true; void flushSegmentQueue()');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.writes.length,1);
+  a.finishWrite(0);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.writes.length,2);
+  a.finishWrite(1);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(a.saved.has('civicmaps_pending_segments_v1'),false);
 });

@@ -213,7 +213,8 @@ const POINTS_KEY = "civicmaps_points";
 const FORM_KEY = "civicmaps_form";
 const SEGMENT_ID_KEY = "civicmaps_segment_id";
 const REVISION_KEY = "civicmaps_segment_revision";
-const PENDING_KEY = "civicmaps_pending_segment";
+const PENDING_KEY = "civicmaps_pending_segment"; // Legacy active-segment snapshot.
+const SYNC_QUEUE_KEY = "civicmaps_pending_segments_v1"; // Durable queue keyed by segment ID.
 
 let points = JSON.parse(localStorage.getItem(POINTS_KEY) || "[]");
 let segmentId = localStorage.getItem(SEGMENT_ID_KEY) || createSegmentId();
@@ -479,30 +480,95 @@ function buildPayload(savedReason="manual", storageState="active") {
   };
 }
 
-// One durable latest-revision snapshot per active segment. In-flight requests
-// hold their own immutable payload; later bay captures replace the queued
-// snapshot, not the request currently being sent.
+// Keep one latest unsynchronised revision per segment, including completed
+// segments. The legacy single-snapshot key is imported for old PWA clients.
+// Never use a pending MongoDB request to gate a new street or bay capture.
+function readSyncQueue() {
+  const saved = localStorage.getItem(SYNC_QUEUE_KEY);
+  const queue = saved ? JSON.parse(saved) : {};
+  if (!queue || typeof queue !== "object" || Array.isArray(queue)) {
+    throw new Error("Invalid local sync queue; export retained data before retrying.");
+  }
+  const legacy = localStorage.getItem(PENDING_KEY);
+  if (legacy) {
+    const payload = JSON.parse(legacy);
+    if (!payload || typeof payload.segmentId !== "string" ||
+        !Number.isSafeInteger(payload.revision)) {
+      throw new Error("Invalid legacy segment snapshot; manual recovery required.");
+    }
+    const existing = queue[payload.segmentId];
+    if (!existing || JSON.parse(existing).revision < payload.revision) {
+      queue[payload.segmentId] = legacy;
+    }
+  }
+  return queue;
+}
+
+function writeSyncQueue(queue) {
+  if (Object.keys(queue).length) {
+    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+  } else {
+    localStorage.removeItem(SYNC_QUEUE_KEY);
+  }
+}
+
+function queueSegmentSnapshot(reason="autosave", storageState="active", bump=false) {
+  if (!points.length && revision === 0 && storageState === "active") return true;
+  try {
+    validateMeta();
+    if (bump || revision < 1) bumpRevision();
+    const snapshot = JSON.stringify(buildPayload(reason, storageState));
+    const queue = readSyncQueue();
+    queue[segmentId] = snapshot;
+    // Commit the durable multi-segment queue before touching compatibility state.
+    writeSyncQueue(queue);
+    localStorage.setItem(PENDING_KEY, snapshot);
+    setStorageStatus("Storage: captured locally · MongoDB sync queued", "warn");
+    return true;
+  } catch (error) {
+    setStorageStatus("Storage: local save failed — " + error.message, "bad");
+    return false;
+  }
+}
+
 function scheduleSyncRetry() {
   clearTimeout(syncRetryTimer);
-  if (navigator.onLine === false || !localStorage.getItem(PENDING_KEY)) return;
+  if (navigator.onLine === false) return;
+  try {
+    if (!Object.keys(readSyncQueue()).length) return;
+  } catch {
+    setStorageStatus("Storage: invalid queued snapshot; export JSON and investigate.", "bad");
+    return;
+  }
   syncRetryTimer = setTimeout(() => { void flushSegmentQueue(); }, 5000);
 }
 
 async function flushSegmentQueue() {
   if (pendingSave) return pendingSave;
   pendingSave = (async () => {
-    while (localStorage.getItem(PENDING_KEY)) {
-      const snapshot = localStorage.getItem(PENDING_KEY);
+    while (true) {
+      let entry;
+      try {
+        entry = Object.entries(readSyncQueue())[0];
+      } catch(error) {
+        setStorageStatus("Storage: invalid queued local snapshot — " + error.message, "bad");
+        return false;
+      }
+      if (!entry) break;
+      const [targetId, snapshot] = entry;
       let payload;
       try {
         payload = JSON.parse(snapshot);
+        if (payload.segmentId !== targetId || !Number.isSafeInteger(payload.revision)) {
+          throw new Error("Snapshot identity mismatch");
+        }
       } catch {
-        setStorageStatus("Storage: invalid pending local snapshot. Export JSON and investigate.", "bad");
+        setStorageStatus("Storage: invalid queued segment; export JSON and investigate.", "bad");
         return false;
       }
       try {
-        // An interrupted network request must not starve all newer revisions.
-        // Retry is safe because segment IDs and revisions are idempotent.
+        // One writer per browser ensures older revisions cannot overtake newer
+        // ones; MongoDB's revision gate protects independent retries.
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 12000);
         let response;
@@ -517,19 +583,21 @@ async function flushSegmentQueue() {
           clearTimeout(timeoutId);
         }
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || `Save failed (${response.status}).`);
-        // Do not erase a newer revision written while this request was running.
+        if (!response.ok) throw new Error(result.error || "Save failed (" + response.status + ").");
+        const latest = readSyncQueue();
+        // Do not remove a newer revision of this same street while an older
+        // immutable network request is in flight.
+        if (latest[targetId] === snapshot) {
+          delete latest[targetId];
+          writeSyncQueue(latest);
+        }
         if (localStorage.getItem(PENDING_KEY) === snapshot) {
           localStorage.removeItem(PENDING_KEY);
-          setStorageStatus(
-            `Storage: synced to MongoDB · revision ${result.revision} · ${result.pointCount} points`,
-            "good"
-          );
-        } else {
-          setStorageStatus("Storage: syncing newer local captures…", "warn");
         }
-      } catch (error) {
-        setStorageStatus(`Storage: local copy queued — ${error.message}`, "warn");
+        setStorageStatus("Storage: synced to MongoDB · revision " + result.revision +
+          " · " + result.pointCount + " points", "good");
+      } catch(error) {
+        setStorageStatus("Storage: local copy queued — " + error.message, "warn");
         scheduleSyncRetry();
         return false;
       }
@@ -545,20 +613,9 @@ async function flushSegmentQueue() {
 }
 
 function persistSegment(reason="autosave", storageState="active", bump=false) {
-  if (!points.length && revision === 0 && storageState === "active") return Promise.resolve(true);
-  try {
-    validateMeta();
-    if (bump || revision < 1) bumpRevision();
-    const payload = buildPayload(reason, storageState);
-    // localStorage is written synchronously before any network operation.
-    localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
-    setStorageStatus("Storage: captured locally · MongoDB sync queued", "warn");
-    if (navigator.onLine === false) return Promise.resolve(false);
-    return flushSegmentQueue();
-  } catch (error) {
-    setStorageStatus(`Storage: local save failed — ${error.message}`, "bad");
-    return Promise.resolve(false);
-  }
+  const queued = queueSegmentSnapshot(reason, storageState, bump);
+  if (!queued || navigator.onLine === false) return Promise.resolve(false);
+  return flushSegmentQueue();
 }
 
 function scheduleMetadataPersist() {
@@ -969,16 +1026,18 @@ $("downloadBtn").addEventListener("click", () => {
 $("clearBtn").addEventListener("click", async () => {
   const hasPoints = points.length > 0;
   const message = hasPoints
-    ? "Finish this road segment and clear it from the device? The current segment will be saved to MongoDB first. If that save fails, nothing will be cleared."
+    ? "Finish this road segment and start the next? It will be retained locally until MongoDB synchronises."
     : "Clear the current local segment state and start a new segment?";
   if (!confirm(message)) return;
 
   if (hasPoints) {
-    const saved = await persistSegment("segment_complete", "complete", true);
-    if (!saved) {
-      setStatus("Segment was not cleared because the database save did not complete.", "bad");
+    // Completion is committed locally before the form is cleared. MongoDB
+    // may still be offline; the previous segment remains in the durable queue.
+    if (!queueSegmentSnapshot("segment_complete", "complete", true)) {
+      setStatus("Segment retained because local completion could not be saved.", "bad");
       return;
     }
+    if (navigator.onLine !== false) void flushSegmentQueue();
   }
 
   points = [];
@@ -1007,7 +1066,7 @@ $("clearBtn").addEventListener("click", async () => {
 });
 
 window.addEventListener("online", () => {
-  if (localStorage.getItem(PENDING_KEY)) void flushSegmentQueue();
+  if (localStorage.getItem(PENDING_KEY) || localStorage.getItem(SYNC_QUEUE_KEY)) void flushSegmentQueue();
   else if (points.length) void persistSegment("online_retry", "active", false);
 });
 
@@ -1016,8 +1075,8 @@ render();
 checkStorageHealth();
 // Remote lookup configuration is loaded only when a local match is unavailable.
 
-if (localStorage.getItem(PENDING_KEY)) {
-  setStorageStatus("Storage: unsynced local capture found; retrying MongoDB…", "warn");
+if (localStorage.getItem(PENDING_KEY) || localStorage.getItem(SYNC_QUEUE_KEY)) {
+  setStorageStatus("Storage: unsynced local captures found; retrying MongoDB…", "warn");
   setTimeout(() => { void flushSegmentQueue(); }, 500);
 } else if (points.length) {
   setTimeout(() => { void persistSegment("startup_retry", "active", revision < 1); }, 500);
