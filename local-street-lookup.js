@@ -32,7 +32,8 @@
     const distance = Math.hypot(px - t * dx, py - t * dy);
     return {
       distance, t, cross: dx * py - dy * px,
-      nearestEndpoint: Math.min(t, 1 - t) * Math.sqrt(lenSq)
+      nearestEndpoint: Math.min(seg.startBoundary === false ? Infinity : t * Math.sqrt(lenSq),
+        seg.endBoundary === false ? Infinity : (1 - t) * Math.sqrt(lenSq))
     };
   }
 
@@ -42,9 +43,12 @@
     const filtered = [];
     for (const seg of bundle.segments) {
       if (!seg || !seg.street || !validPoint(seg.a) || !validPoint(seg.b)) continue;
-      if (!seg.from || !seg.to || !seg.positive || !seg.negative) continue;
-      if (!["NORTH", "SOUTH", "EAST", "WEST"].includes(seg.positive) ||
-          !["NORTH", "SOUTH", "EAST", "WEST"].includes(seg.negative)) continue;
+      if (!seg.from || !seg.to) continue;
+      // Boundary metadata may be available even where the road's cardinal
+      // side is not safely known (e.g. curves and diagonal streets).
+      const validSides = ["NORTH","SOUTH","EAST","WEST"];
+      if ((seg.positive || seg.negative) &&
+          (!validSides.includes(seg.positive) || !validSides.includes(seg.negative))) continue;
       const i = filtered.push(seg) - 1;
       // Expand each segment bbox by ~45 m so nearby street geometry is considered.
       const padding = 0.00055;
@@ -104,7 +108,8 @@
       }
       const threshold = Math.max(SIDE_MIN_DISTANCE_M, accuracy * 0.7);
       // A GPS fix straddling the centreline cannot support a cardinal side.
-      const side = best.distance < threshold ? "" : best.cross > 0 ? best.seg.positive : best.seg.negative;
+      const side = best.distance < threshold || !best.seg.positive || !best.seg.negative
+        ? "" : best.cross > 0 ? best.seg.positive : best.seg.negative;
       return {
         status:"matched",
         source:"local",
