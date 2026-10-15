@@ -32,9 +32,10 @@ class SourceTerminalTests(unittest.TestCase):
     def test_official_reviewed_terminal_reference_is_separately_identified(self):
         a=[144.900,-37.800];b=[144.901,-37.800]
         doc={"type":"FeatureCollection","features":[road(11,"A STREET",a,b,100,101)]}
-        rows,_=terminal_candidates(doc,BOUNDARY,"r","l",{"11"})
+        rows,_=terminal_candidates(doc,BOUNDARY,"r","l",{("11","100")})
         self.assertEqual(len(rows),2)
-        self.assertTrue(all(x["physicalDeadEndVerified"] for x in rows))
+        self.assertEqual(sum(x["physicalDeadEndVerified"] for x in rows),1)
+        self.assertEqual({x["terminalUFI"] for x in rows if x["physicalDeadEndVerified"]},{"100"})
 
     def test_terminal_excludes_nonoperational_and_outside(self):
         src={"type":"FeatureCollection","features":[
