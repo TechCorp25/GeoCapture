@@ -118,7 +118,7 @@
         side,
         distance:Math.round(best.distance * 10) / 10,
         roadSegmentId:best.seg.id,
-        attribution:bundle.attribution || {source:bundle.source || "Municipal road geometry"},
+        attribution:best.seg.attribution || bundle.attribution || {source:bundle.source || "Municipal road geometry"},
         warnings:side ? [] : ["Street side not reliable at reported GPS accuracy; select manually."]
       };
     }
