@@ -1,4 +1,4 @@
-const CACHE="civicmaps-gps-v16-maribyrnong-arterial-minor-reviewed";
+const CACHE="civicmaps-gps-v17-maribyrnong-provenance";
 const ASSETS=["./","./index.html","./manifest.json","./local-road-data.js","./municipal-road-pack.js","./municipal-road-phase3.js","./municipal-road-loader.js","./local-street-lookup.js",
 "./municipal-data/manifest.json",
 "./municipal-data/braybrook.json","./municipal-data/footscray.json",
