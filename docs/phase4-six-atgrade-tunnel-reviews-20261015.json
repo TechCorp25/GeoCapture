@@ -1,0 +1,216 @@
+{
+  "schema": "geocapture.phase4.source_grade_separation_review.v1",
+  "reviewDate": "2026-10-15",
+  "reviewedBy": "GeoCapture independently rechecked official TR_ROAD PFI/UFI graph",
+  "sourceRoadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
+  "councilPolygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+  "originalCandidateArchive": "GeoCapture_Phase4_Audit_and_Field_Review_20261015.zip",
+  "sourceDatasetURL": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+  "officialMunicipalPolygonURL": "https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Admin/FeatureServer/9",
+  "publicationVersion": "maribyrnong-phase4-20261015-v3",
+  "reviewCriteria": [
+    "Original named surface-road candidate PFI(s) and geometry reconstructed from official source with exact UFI continuity",
+    "Both actual endpoints have exactly two distinct grade-surface road names: the candidate street and its declared bounding street",
+    "Extra WEST GATE TUNNEL TOLLWAY class-0 tunnel source features do not create at-grade public junctions",
+    "Every source line within official City of Maribyrnong polygon; class 3,4 or 5 open status O, vehicular access code 1; no source PFI already published",
+    "No physical GPS accuracy or field test implied; operator corrections and current uncertainty rules preserved"
+  ],
+  "records": [
+    {
+      "candidateId": "vicmap-5677562",
+      "street": "HYDE STREET",
+      "between": [
+        "LENNOX STREET",
+        "SCHILD STREET"
+      ],
+      "sourcePFIs": [
+        "5677562"
+      ],
+      "sourceUFIEndpoints": [
+        2313243,
+        74945138
+      ],
+      "roadClassCode": 3,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [],
+        [
+          "20231136",
+          "20231137"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    },
+    {
+      "candidateId": "vicmap-20230918-20230919",
+      "street": "NEWCASTLE STREET",
+      "between": [
+        "BALLARAT STREET",
+        "STEPHEN STREET"
+      ],
+      "sourcePFIs": [
+        "20230918",
+        "20230919"
+      ],
+      "sourceUFIEndpoints": [
+        2315240,
+        74945152
+      ],
+      "roadClassCode": 5,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [],
+        [
+          "20231140",
+          "20231141"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    },
+    {
+      "candidateId": "vicmap-5679335",
+      "street": "NORFOLK STREET",
+      "between": [
+        "BALLARAT STREET",
+        "STEPHEN STREET"
+      ],
+      "sourcePFIs": [
+        "5679335"
+      ],
+      "sourceUFIEndpoints": [
+        2315028,
+        74945150
+      ],
+      "roadClassCode": 5,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [],
+        [
+          "20231138",
+          "20231139"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    },
+    {
+      "candidateId": "vicmap-5677563",
+      "street": "SCHILD STREET",
+      "between": [
+        "DUCKER STREET",
+        "HYDE STREET"
+      ],
+      "sourcePFIs": [
+        "5677563"
+      ],
+      "sourceUFIEndpoints": [
+        2313602,
+        74945138
+      ],
+      "roadClassCode": 4,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [],
+        [
+          "20231136",
+          "20231137"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    },
+    {
+      "candidateId": "vicmap-5679529",
+      "street": "STEPHEN STREET",
+      "between": [
+        "NEWCASTLE STREET",
+        "NORFOLK STREET"
+      ],
+      "sourcePFIs": [
+        "5679529"
+      ],
+      "sourceUFIEndpoints": [
+        74945152,
+        74945150
+      ],
+      "roadClassCode": 5,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [
+          "20231140",
+          "20231141"
+        ],
+        [
+          "20231138",
+          "20231139"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    },
+    {
+      "candidateId": "vicmap-5679766",
+      "street": "STEPHEN STREET",
+      "between": [
+        "FRANCIS STREET",
+        "NEWCASTLE STREET"
+      ],
+      "sourcePFIs": [
+        "5679766"
+      ],
+      "sourceUFIEndpoints": [
+        13098534,
+        74945152
+      ],
+      "roadClassCode": 5,
+      "vehicularAccessCode": "1",
+      "sourceRoadStatus": "O",
+      "sourceFeatureType": "road",
+      "gradeSeparatedTunnelPFIsByEndpoint": [
+        [],
+        [
+          "20231140",
+          "20231141"
+        ]
+      ],
+      "originalReason": "source_intersection_not_unique",
+      "outcome": "VERIFIED_PUBLISHABLE",
+      "publicationEligible": true,
+      "physicalFieldVerified": false,
+      "publicationPackage": "yarraville",
+      "outstanding": "Source qualified only; installed-phone field acceptance separately blocked"
+    }
+  ]
+}
