@@ -16,9 +16,11 @@
       "total": 4148,
       "published": 1668,
       "outside": 2254,
-      "unsupported_for_vehicular_lookup": 23,
-      "requiring_evidence": 203,
-      "original_release_pending": 226
+      "unsupported_for_vehicular_lookup": 31,
+      "requiring_evidence": 195,
+      "original_release_pending": 226,
+      "new_source_verified_unsupported_class0": 8,
+      "dispositionEvidence": "docs/phase4-verified-unsupported-class0-freeways-20261015.json"
     },
     "features": {
       "total": 10097,

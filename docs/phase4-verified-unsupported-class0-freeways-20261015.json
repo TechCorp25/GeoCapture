@@ -1,0 +1,369 @@
+{
+  "schema": "geocapture.phase4.verified_unsupported_blocks.v1",
+  "scope": "Eight source-classified class-0 controlled-access freeway or entrance-ramp blocks",
+  "reviewDate": "2026-10-15",
+  "reviewer": "Automated source-only road-feature review; physical inspection not performed",
+  "originalArchive": "GeoCapture_Phase4_Audit_and_Field_Review_20261015.zip",
+  "sourceRoadSHA256": "3f5a4ee47b7e86cff22df5e82efde6afa866eacf42f07ad8b87fce2a944412bb",
+  "councilPolygonSHA256": "d56a8917174c3e1752099fbdb9fba77780d274f43bfb03fcd3267d40bce1b5fb",
+  "evidenceUrls": {
+    "vicmapTransport": "https://discover.data.vic.gov.au/en_AU/dataset/vicmap-transport-road-line",
+    "roadClassDefinitions": "https://www.localgovernment.vic.gov.au/__data/assets/pdf_file/0011/210026/Vicmap-Transport-Road-Classification.pdf",
+    "freewayStoppingLaw": "https://transport.vic.gov.au/road-and-active-transport/road-rules-and-safety/freeways",
+    "councilPolygon": "https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Admin/FeatureServer/9"
+  },
+  "notes": [
+    "All listed PFIs were separately checked in preserved official source ledger against CLASS_CODE=0, VEHICULAR_ACCESS=1, ROAD_STATUS=O and road/bridge segment identity.",
+    "VICMAP class-0 means full-access-controlled freeway, unlike regular municipal street parking. Transport Victoria states routine stopping is prohibited except emergencies.",
+    "Original municipal boundary crossing is retained per candidate. Out-of-scope status does not assert definitive road-owner jurisdiction.",
+    "No candidate or source geometry is published. No physical field-testing performed."
+  ],
+  "records": [
+    {
+      "candidateId": "vicmap-23429260-23429319",
+      "street": "WEST GATE FREEWAY",
+      "sourcePFIs": [
+        "23429260",
+        "23429319"
+      ],
+      "networkUFIEndpoints": [
+        [
+          73685840,
+          74945165
+        ],
+        [
+          73685841,
+          73685840
+        ]
+      ],
+      "featureTypes": [
+        "road",
+        "bridge"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-23429318-23429332-23429454-24113170",
+      "street": "WEST GATE FREEWAY",
+      "sourcePFIs": [
+        "23429318",
+        "23429332",
+        "23429454",
+        "24113170"
+      ],
+      "networkUFIEndpoints": [
+        [
+          74945169,
+          73685843
+        ],
+        [
+          73685843,
+          74945174
+        ],
+        [
+          74945174,
+          75566598
+        ],
+        [
+          75566598,
+          75566600
+        ]
+      ],
+      "featureTypes": [
+        "bridge",
+        "road",
+        "road",
+        "bridge"
+      ],
+      "municipalityMembership": "CROSSING",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1",
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O",
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-23429331-23429333",
+      "street": "WEST GATE FREEWAY",
+      "sourcePFIs": [
+        "23429331",
+        "23429333"
+      ],
+      "networkUFIEndpoints": [
+        [
+          74945165,
+          74945166
+        ],
+        [
+          74945166,
+          70479923
+        ]
+      ],
+      "featureTypes": [
+        "road",
+        "road"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-23429348-24644527-24644534",
+      "street": "WEST GATE FREEWAY",
+      "sourcePFIs": [
+        "23429348",
+        "24644527",
+        "24644534"
+      ],
+      "networkUFIEndpoints": [
+        [
+          74945220,
+          75566594
+        ],
+        [
+          74945208,
+          74945220
+        ],
+        [
+          75566594,
+          75566595
+        ]
+      ],
+      "featureTypes": [
+        "road",
+        "road",
+        "bridge"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-24113181",
+      "street": "WEST GATE FREEWAY",
+      "sourcePFIs": [
+        "24113181"
+      ],
+      "networkUFIEndpoints": [
+        [
+          70479923,
+          74945208
+        ]
+      ],
+      "featureTypes": [
+        "road"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-23429248",
+      "street": "WEST GATE IN-WILLIAMSTOWN RAMP OF",
+      "sourcePFIs": [
+        "23429248"
+      ],
+      "networkUFIEndpoints": [
+        [
+          70479923,
+          74945205
+        ]
+      ],
+      "featureTypes": [
+        "road"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-23429523-24644528",
+      "street": "WEST GATE-HYDE IN RAMP OF",
+      "sourcePFIs": [
+        "23429523",
+        "24644528"
+      ],
+      "networkUFIEndpoints": [
+        [
+          74945222,
+          75566593
+        ],
+        [
+          74945208,
+          74945222
+        ]
+      ],
+      "featureTypes": [
+        "bridge",
+        "road"
+      ],
+      "municipalityMembership": "INSIDE",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    },
+    {
+      "candidateId": "vicmap-24113189-24113190-24113191",
+      "street": "WEST GATE-HYDE IN RAMP OF",
+      "sourcePFIs": [
+        "24113189",
+        "24113190",
+        "24113191"
+      ],
+      "networkUFIEndpoints": [
+        [
+          74945232,
+          74945233
+        ],
+        [
+          74945233,
+          74945231
+        ],
+        [
+          74945231,
+          74945217
+        ]
+      ],
+      "featureTypes": [
+        "bridge",
+        "road",
+        "bridge"
+      ],
+      "municipalityMembership": "CROSSING",
+      "originalReason": "source_road_class_or_access_requires_review",
+      "classCodes": [
+        0,
+        0,
+        0
+      ],
+      "vehicularAccessCodes": [
+        "1",
+        "1",
+        "1"
+      ],
+      "roadStatusCodes": [
+        "O",
+        "O",
+        "O"
+      ],
+      "disposition": "VERIFIED_UNSUPPORTED",
+      "publicationEligible": false,
+      "physicalVerificationStatus": "NOT_PERFORMED",
+      "reviewDate": "2026-10-15",
+      "reason": "Individually verified class-0 controlled-access West Gate Freeway or dedicated ramp; unsuitable for municipal on-street parking-bay matching under Transport Victoria freeway stopping rules."
+    }
+  ]
+}
