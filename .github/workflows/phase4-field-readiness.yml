@@ -1,0 +1,15 @@
+name: GeoCapture Phase 4 physical field-testing authorisation gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prefield-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Confirm all non-field acceptance criteria before any live field test
+        run: python -m scripts.check_phase4_nonfield_gate --require-field-ready
