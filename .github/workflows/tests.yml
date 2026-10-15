@@ -21,3 +21,5 @@ jobs:
         run: node --test tests/*.test.cjs
       - name: Python regression tests
         run: python -m unittest discover -s tests -v
+      - name: Phase 4 non-field integrity and blocked-field-gate verification
+        run: python -m scripts.check_phase4_nonfield_gate
