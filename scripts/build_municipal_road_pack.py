@@ -113,14 +113,14 @@ def main():
         raise SystemExit("No verified road segments; refusing to publish an empty pack")
     payload = json.dumps(rows, separators=(",", ":"), ensure_ascii=False)
     script = (
-        "/* Generated from reviewed municipal GeoJSON; preserve attribution. */\\n"
-        "(function(root){ 'use strict';\\n"
-        "const before=root.GeoCaptureRoadData;\\n"
-        "if(!before) throw new Error('Load local-road-data.js first');\\n"
+        "/* Generated from reviewed municipal GeoJSON; preserve attribution. */\n"
+        "(function(root){ 'use strict';\n"
+        "const before=root.GeoCaptureRoadData;\n"
+        "if(!before) throw new Error('Load local-road-data.js first');\n"
         "root.GeoCaptureRoadData=Object.freeze({...before,"
-        "version:before.version+'+" + args.jurisdiction + "',"
-        "segments:before.segments.concat(" + payload + ")});\\n"
-        "})(typeof globalThis==='object'?globalThis:this);\\n"
+        "version:before.version+" + json.dumps("+" + args.jurisdiction) + ","
+        "segments:before.segments.concat(" + payload + ")});\n"
+        "})(typeof globalThis==='object'?globalThis:this);\n"
     )
     pathlib.Path(args.output).write_text(script, encoding="utf-8")
     print(f"Verified road-geometry edges: {len(rows)}; rejected features: {len(skipped)}", file=sys.stderr)
