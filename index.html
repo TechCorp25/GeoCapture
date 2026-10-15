@@ -816,8 +816,20 @@ async function autoFillLocation(reuseFix=false) {
     }
     const warnings = packageWarning + (Array.isArray(result.warnings) ? result.warnings.join(" ") : "");
     const candidates = !result.street && result.candidates?.length ? ` Nearby streets: ${result.candidates.join(", ")}.` : "";
-    locationMessage(`${filled ? `${filled} field${filled === 1 ? "" : "s"} filled.` : "Existing entries kept. Clear a field to fill it again."} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`,
-      warnings || retainedBoundaryMismatch ? "warn" : "good");
+    const hasSuggestions = Object.values(suggestions).some(value => typeof value === "string" && value.trim());
+    let outcome;
+    if (filled) {
+      outcome = `${filled} field${filled === 1 ? "" : "s"} filled.`;
+    } else if (!hasSuggestions) {
+      outcome = "No reliable street match. Retry GPS lookup or enter the street and boundaries manually.";
+    } else {
+      const emptyFields = Object.keys(suggestions).filter(id => !$(id).value.trim());
+      outcome = emptyFields.length
+        ? "No suggestions for the remaining empty fields. Existing entries kept; enter missing details manually."
+        : "Street details are already entered. Existing entries kept.";
+    }
+    locationMessage(`${outcome} ${retainedBoundaryMismatch ? "Existing boundaries differ from the lookup; review them manually. " : ""}${warnings}${candidates}`.trim(),
+      !filled || warnings || retainedBoundaryMismatch ? "warn" : "good");
     setStatus("Ready to capture.");
   } catch (error) {
     if (request === locationRequest) {
