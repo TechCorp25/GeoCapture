@@ -111,15 +111,26 @@ def reconcile(source, boundary, candidates, dispositions, published, road_sha, l
             raise ValueError("Candidate references missing original PFI")
         for identifier in ids:
             candidate_by_pfi[identifier].append(p.get("roadSegmentId"))
+        membership = line_membership((candidate.get("geometry") or {}).get("coordinates") or [], boundary)
+        previously_published = bool(ids and all(identifier in published_by_pfi for identifier in ids))
+        if membership == "OUTSIDE":
+            disposition, reason = "OUT_OF_SCOPE", "wholly_outside_official_municipal_polygon"
+        elif membership == "INVALID":
+            disposition, reason = "AMBIGUOUS", "invalid_candidate_geometry"
+        elif decision.get("status") == "REJECT":
+            disposition, reason = "REJECTED", decision.get("reason")
+        elif decision.get("status") == "ELIGIBLE":
+            disposition, reason = "VERIFIED", decision.get("reason")
+        else:
+            disposition, reason = "PENDING_REVIEW", decision.get("reason")
         candidate_ledger.append({
             "candidateId": p.get("roadSegmentId"), "sourcePFIs": ids,
             "street": p.get("street"), "between": [p.get("from"), p.get("to")],
             "topologyAuditStatus": decision.get("status"),
-            "disposition": ("VERIFIED" if decision.get("status") == "ELIGIBLE"
-                            else "REJECTED" if decision.get("status") == "REJECT"
-                            else "PENDING_REVIEW"),
-            "reason": decision.get("reason"),
-            "publicationStatus": "STAGED_NOT_PUBLISHED",
+            "municipalityMembership": membership,
+            "disposition": disposition,
+            "reason": reason,
+            "publicationStatus": "PUBLISHED_PREVIOUS_PHASE" if previously_published else "STAGED_NOT_PUBLISHED",
             "boundaryEndpointsVerified": False,
         })
     endpoint_counts = Counter()
@@ -178,6 +189,9 @@ def reconcile(source, boundary, candidates, dispositions, published, road_sha, l
     if absent:
         raise ValueError("Published PFIs absent from new municipality source: " + str(absent[:10]))
     in_scope = statuses["VERIFIED"] + statuses["PENDING_REVIEW"] + statuses["UNSUPPORTED"] + statuses["AMBIGUOUS"]
+    candidate_dispositions = Counter(item["disposition"] for item in candidate_ledger)
+    localities = Counter(loc for row in ledger if row["municipalityMembership"] != "OUTSIDE"
+                         for loc in row["localities"])
     report = {
         "municipality": "CITY OF MARIBYRNONG", "sourceRoadSha256": road_sha,
         "sourceLGASha256": lga_sha, "sourceRoadFeatureCount": len(features),
@@ -185,6 +199,8 @@ def reconcile(source, boundary, candidates, dispositions, published, road_sha, l
         "roadDispositionCounts": dict(sorted(statuses.items())),
         "roadFeaturesNotOutOfScope": in_scope, "roadCandidateCount": len(candidate_ledger),
         "candidateAuditCounts": dict(Counter(d.get("status") for d in dispositions)),
+        "candidateFinalDispositions": dict(sorted(candidate_dispositions.items())),
+        "localityFeaturePresence": dict(sorted(localities.items())),
         "previouslyPublishedPFIs": len(published_by_pfi),
         "previouslyPublishedGeometryMatched": sum(x["referenceGeometryMatchesCurrentSource"] for x in ledger),
         "completeCoverageClaim": False,
