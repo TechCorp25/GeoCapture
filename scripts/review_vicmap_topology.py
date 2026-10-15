@@ -147,8 +147,8 @@ def derive_candidates(doc,bbox=None):
                 if not valid or not end_boundary or from_name==end_boundary or len(path)<2:continue
                 if not within(path[0]) or not within(path[-1]):
                     reasons["edge_of_download_bbox"]+=1;continue
-                id_parts=sorted(visited)
-                key=(street,tuple(id_parts))
+                id_parts=sorted(visited, key=lambda i: edges[i]["id"])
+                key=(street,tuple(edges[i]["id"] for i in id_parts))
                 if key in emitted:continue
                 emitted.add(key)
                 candidates.append({
