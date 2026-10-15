@@ -1,0 +1,56 @@
+name: Vicmap Footscray source review
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/maribyrnong-vicmap-geodata]
+    paths:
+      - "scripts/fetch_vicmap_roads.py"
+      - "scripts/review_vicmap_topology.py"
+      - "tests/test_vicmap_topology.py"
+      - ".github/workflows/vicmap-review.yml"
+permissions:
+  contents: read
+jobs:
+  acquire-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download official bounded Vicmap TR_ROAD snapshot
+        run: |
+          mkdir -p work/vicmap
+          python scripts/fetch_vicmap_roads.py \
+            --output work/vicmap/footscray-source.geojson \
+            --manifest work/vicmap/source-manifest.json \
+            --bbox 144.87 -37.835 144.945 -37.785
+      - name: Generate review-only intersection candidates
+        run: |
+          python scripts/review_vicmap_topology.py \
+            --input work/vicmap/footscray-source.geojson \
+            --output work/vicmap/footscray-candidates.geojson \
+            --report work/vicmap/topology-audit.json \
+            --bbox 144.87 -37.835 144.945 -37.785
+      - name: Summarize priority captured street and candidate count
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("work/vicmap/footscray-candidates.geojson").read_text())
+          features=d["features"]
+          print("Road-block candidates requiring review:",len(features))
+          for feature in features:
+              p=feature["properties"]
+              if p["street"] in {"TALBOT STREET","COWPER STREET","FOOTSCRAY ROAD"}:
+                  print("PRIORITY:",p["street"],"between",p["from"],"and",p["to"],"verified=",p["boundaryEndpointsVerified"])
+          PY
+      - name: Save reviewed-source evidence (never auto-publish to GeoCapture)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vicmap-footscray-unverified-review
+          path: work/vicmap/
+          if-no-files-found: warn
+          retention-days: 30
