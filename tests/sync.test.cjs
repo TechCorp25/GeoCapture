@@ -179,7 +179,7 @@ test('localStorage quota failure does not accept or number an uncommitted bay', 
   })()`);
   await a.click('captureBtn');
   assert.equal(a.run('points.length'),0,'failed write must roll back in-memory bay');
-  assert.equal(a.elements.count.textContent,'0','failed capture must not update visible count');
+  assert.equal(a.elements.count.textContent,0,'failed capture must not update visible count');
   assert.match(a.elements.status.textContent,/Bay not saved/);
   assert.equal(a.writes.length,0,'failed local commit must not post to MongoDB');
   assert.equal(a.elements.captureBtn.disabled,false);
