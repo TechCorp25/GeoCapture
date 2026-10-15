@@ -71,8 +71,13 @@ def validated_reference(reference, official):
     """Old publication is corroboration only if its source geometry still agrees."""
     published = reference.get("geometry") or {}
     source = official.get("geometry") or {}
+    source_line = source.get("coordinates") or []
+    reviewed_line = published.get("coordinates") or []
+    # Phase 3 validated paths are sometimes ordered junction-to-junction in
+    # reverse of the source PFI axis; reversal preserves the same geometry.
+    same_line = reviewed_line == source_line or reviewed_line == list(reversed(source_line))
     return (published.get("type") == source.get("type") == "LineString"
-            and published.get("coordinates") == source.get("coordinates")
+            and same_line and len(source_line) >= 2
             and (reference.get("properties") or {}).get("boundaryEndpointsVerified") is True)
 
 
