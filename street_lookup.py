@@ -32,6 +32,8 @@ _provider_backoff = {}
 _provider_backoff_lock = threading.Lock()
 CACHE_TTL_SECONDS = 600
 PROVIDER_BACKOFF_SECONDS = 120
+ALL_PROVIDERS_RETRY_SECONDS = 10
+PROVIDER_TIMEOUT_SECONDS = 12
 
 
 class LookupUnavailable(Exception):
@@ -181,11 +183,11 @@ def road_network(lat, lon, include_locality=False):
             headers = {"User-Agent": "GeoCapture/1.0 https://github.com/TechCorp25/GeoCapture",
                        "Content-Type": "application/x-www-form-urlencoded"}
             encoded = urlencode({"data": query})
-            # The fallback supports GET; some hosted providers reject POST.
-            # This is server-to-provider only; the browser API stays POST.
-            request = (Request(url + ("&" if "?" in url else "?") + encoded, headers=headers)
-                       if index else Request(url, data=encoded.encode(), headers=headers))
-            data = fetch_json(request, timeout=4 if index == 0 and len(endpoints) > 1 else 25)
+            # Both providers support GET. POST has repeatedly failed from the
+            # deployed host while the identical GET query succeeds. The browser
+            # API remains POST; never log this upstream URL or its coordinates.
+            request = Request(url + ("&" if "?" in url else "?") + encoded, headers=headers)
+            data = fetch_json(request, timeout=PROVIDER_TIMEOUT_SECONDS)
             if data.get("remark") or not isinstance(data.get("elements"), list):
                 raise LookupUnavailable("Incomplete road-network response.")
             elements = data["elements"]
@@ -200,7 +202,15 @@ def road_network(lat, lon, include_locality=False):
             with _provider_backoff_lock:
                 _provider_backoff[url] = time.monotonic() + PROVIDER_BACKOFF_SECONDS
             logging.warning("Street provider attempt %s failed", index + 1)
-    raise LookupUnavailable("Street providers unavailable. Retry lookup.")
+    # A healthy fallback still shields a failed primary for two minutes. When
+    # every provider fails, permit recovery after a short pause instead of
+    # making every user retry fail without contacting either provider. Do not
+    # extend an existing deadline when requests arrive during the pause.
+    with _provider_backoff_lock:
+        retry_at = time.monotonic() + ALL_PROVIDERS_RETRY_SECONDS
+        for url in endpoints:
+            _provider_backoff[url] = min(_provider_backoff.get(url, retry_at), retry_at)
+    raise LookupUnavailable("Street providers unavailable. Retry lookup in 10 seconds.")
 
 
 
